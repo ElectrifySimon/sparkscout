@@ -1,9 +1,6 @@
-# sparkscout
-mcp4life
+# ⚡ Sparkscout
 
-# ⚡ IRENA FastMCP
-
-Give your AI agent instant, verifiable access to official International Renewable Energy Agency (IRENA) technical reports and global energy statistics.
+Give your AI agent instant, verifiable access to official technical reports and global energy data.
 
 ---
 
