@@ -29,6 +29,85 @@ Through a single MCP integration, Sparkscout provides access to:
 Whether you are preparing a ministerial briefing, conducting policy analysis, building an AI assistant, or exploring energy transition trends, Sparkscout allows AI systems to move beyond plausible answers and toward evidence-based outputs.
 
 ---
+## 🔌 What Is MCP?
+
+Most AI assistants are a bit like a very knowledgeable consultant who has read a great deal, but who is locked outside the organisation's information systems.
+
+They can discuss topics, explain concepts, and draft reports, but they cannot automatically access your databases, publications, knowledge repositories, or analytical tools.
+
+MCP changes that.
+
+In simple terms, **MCP is a standard way for AI systems to securely connect to trusted sources of information and specialised tools.**
+
+---
+
+### 🏛️ Why Does This Matter?
+
+Consider a common question:
+
+> "Which countries have made the fastest progress in renewable energy deployment, and what policies have contributed to that success?"
+
+Without access to trusted information sources, an AI assistant can only respond based on what it remembers from past training.
+
+With MCP, the AI can:
+
+- Look up the latest statistical data
+- Search relevant publications
+- Retrieve supporting evidence
+- Reference its sources
+- Combine information into a single analytical response
+
+Instead of relying on memory, it can work from evidence.
+
+---
+
+### 📚 A Simpler Analogy
+
+Think of an AI assistant as a new analyst joining your organisation.
+
+On day one, the analyst may be intelligent and capable, but they do not yet have access to:
+
+- The document library
+- Statistical databases
+- Knowledge repositories
+- Internal tools
+
+As a result, their ability to deliver evidence-based analysis is limited.
+
+MCP is the mechanism that gives that analyst access to those resources.
+
+Once connected, they can work with the same evidence that your staff would normally consult.
+
+---
+
+### ⚡ What Does Sparkscout MCP Do?
+
+Sparkscout is an MCP service focused on energy intelligence.
+
+It allows AI systems to access:
+
+📚 Official publications and technical reports
+📊 Global energy statistics
+💰 Public finance and investment data
+🌍 Country and regional indicators
+🔗 Citation-ready evidence
+
+An AI assistant can therefore move seamlessly between:
+
+> "What does the literature say?"
+
+and
+
+> "What does the data show?"
+
+without requiring users to search multiple systems manually.
+
+---
+
+### 🎯 In One Sentence
+
+**MCP gives AI assistants access to trusted information sources; Sparkscout gives them access to trusted energy intelligence.**
+---
 
 # 🎯 Why Sparkscout?
 
