@@ -1,12 +1,12 @@
-# ⚡ Sparkscout MCP
+# ⚡ Sparkscout MCP (Model Context Protocol)
 
 > **Trusted energy intelligence for AI systems.**
 >
-> Sparkscout MCP enables AI assistants, analytical agents, and decision-support applications to access authoritative publications, structured energy statistics, and citation-ready evidence through a single Model Context Protocol (MCP) interface.
+> Sparkscout MCP enables AI assistants & agents, and decision-support applications to access authoritative publications, structured energy statistics, and citation-ready evidence through a single Model Context Protocol (MCP) interface.
 
 ---
 
-# 📋 Executive Summary
+# 📋 What is this about ?
 
 Sparkscout MCP bridges modern AI systems with trusted energy knowledge.
 
@@ -26,10 +26,10 @@ Through a single MCP integration, Sparkscout provides access to:
 
 ✅ Combined qualitative and quantitative analysis
 
-Whether you are preparing a ministerial briefing, conducting policy analysis, building an AI assistant, or exploring energy transition trends, Sparkscout allows AI systems to move beyond plausible answers and toward evidence-based outputs.
+Sparkscout allows AI systems to move beyond plausible answers and toward evidence-based outputs at no cost.
 
 ---
-## 🔌 What Is MCP?
+## 🔌 What Is a Model Context Protocol (MCP)?
 
 Most AI assistants are a bit like a very knowledgeable consultant who has read a great deal, but who is locked outside the organisation's information systems.
 
@@ -63,18 +63,14 @@ Instead of relying on memory, it can work from evidence.
 
 ### 📚 A Simpler Analogy
 
-Think of an AI assistant as a new analyst joining your organisation.
-
-On day one, the analyst may be intelligent and capable, but they do not yet have access to:
+Think of an AI assistant as a new analyst joining your organisation. On day one, the analyst may be intelligent and capable, but they do not yet have access to:
 
 - The document library
 - Statistical databases
 - Knowledge repositories
 - Internal tools
 
-As a result, their ability to deliver evidence-based analysis is limited.
-
-MCP is the mechanism that gives that analyst access to those resources.
+As a result, their ability to deliver evidence-based analysis is limited. MCP is the mechanism that gives that analyst access to those resources.
 
 Once connected, they can work with the same evidence that your staff would normally consult.
 
