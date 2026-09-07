@@ -37,7 +37,7 @@ They can discuss topics, explain concepts, and draft reports, but they cannot au
 
 MCP changes that.
 
-In simple terms, **MCP is a standard way for AI systems to securely connect to trusted sources of information and specialised tools.**
+> In simple terms, **MCP is a standard way for AI systems to securely connect to trusted sources of information and specialised tools.**
 
 ---
 
@@ -102,11 +102,6 @@ and
 
 without requiring users to search multiple systems manually.
 
----
-
-### 🎯 In One Sentence
-
-**MCP gives AI assistants access to trusted information sources; Sparkscout gives them access to trusted energy intelligence.**
 ---
 
 # 🎯 Why Sparkscout?
