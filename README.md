@@ -14,7 +14,7 @@ Rather than relying solely on model memory, AI agents can access curated publica
 
 Through a single MCP integration, Sparkscout provides access to:
 
-✅ Official publications and technical reports
+✅ Attributed official publications and technical reports from a reputable IGO.
 
 ✅ More than 800,000 historical energy observations
 
