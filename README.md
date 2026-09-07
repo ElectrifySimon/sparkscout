@@ -11,7 +11,7 @@ Add this configuration block to your MCP client (`claude_desktop_config.json`, C
 ```json
 {
   "mcpServers": {
-    "irena": {
+    "sparkscout": {
       "url": "https://<your-mcp-endpoint>/fastmcp",
       "headers": {
         "Authorization": "Bearer <YOUR_BEARER_TOKEN>"
