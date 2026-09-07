@@ -29,12 +29,8 @@ Add this configuration block to your MCP client (`claude_desktop_config.json`, C
 | Without Sparkscout MCP | With Sparkscout MCP |
 | --- | --- |
 | **Hallucinated stats** | Grounded in 800,000+ verified historical data points from a reputable IGO.
-|
 | **Vague policy summaries** | BM25 full-text search across official IRENA publications.
-|
 | **Unverifiable claims** | Automatic citation markers (`[reports: ...]` & `[data: ...]`) in outputs.
-|
-
 ---
 
 ## 💬 Prompts to Try
