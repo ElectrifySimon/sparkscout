@@ -1,4 +1,4 @@
-# ⚡ Sparkscout
+# ⚡ Sparkscout MCP
 
 Give your AI agent instant, verifiable access to official technical reports and global energy data.
 
@@ -26,17 +26,14 @@ Add this configuration block to your MCP client (`claude_desktop_config.json`, C
 
 ## 🎯 What Your AI Agent Gains
 
-| Without IRENA MCP | With IRENA MCP |
+| Without Sparkscout MCP | With Sparkscout MCP |
 | --- | --- |
-| **Hallucinated stats** | Grounded in 800,000+ verified historical data points.
-
- |
+| **Hallucinated stats** | Grounded in 800,000+ verified historical data points from a reputable IGO.
+|
 | **Vague policy summaries** | BM25 full-text search across official IRENA publications.
-
- |
+|
 | **Unverifiable claims** | Automatic citation markers (`[reports: ...]` & `[data: ...]`) in outputs.
-
- |
+|
 
 ---
 
