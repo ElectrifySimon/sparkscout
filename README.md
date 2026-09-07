@@ -1,66 +1,73 @@
 # ⚡ Sparkscout MCP
 
-> Trusted energy intelligence for AI systems.
+> **Trusted energy intelligence for AI systems.**
 >
-> Sparkscout MCP enables AI assistants, analytical agents, and decision-support applications to access official publications, authoritative statistics, and citation-ready evidence through a single Model Context Protocol (MCP) interface.
+> Sparkscout MCP enables AI assistants, analytical agents, and decision-support applications to access authoritative publications, structured energy statistics, and citation-ready evidence through a single Model Context Protocol (MCP) interface.
 
 ---
 
-# Executive Summary
+# 📋 Executive Summary
 
-Sparkscout MCP bridges large language models with curated energy knowledge resources.
+Sparkscout MCP bridges modern AI systems with trusted energy knowledge.
 
-It allows AI systems to combine narrative evidence from publications with structured statistical analysis, producing outputs that are transparent, traceable, and grounded in authoritative sources.
+Rather than relying solely on model memory, AI agents can access curated publications and structured datasets to answer questions using verifiable evidence. This allows analysts, policymakers, researchers, developers, and decision-makers to generate insights that are transparent, reproducible, and grounded in authoritative sources.
 
-Through a single MCP integration, AI applications can:
+Through a single MCP integration, Sparkscout provides access to:
 
-- Search and retrieve content from official energy publications
-- Access more than 800,000 verified statistical observations
-- Query country, regional, and global energy datasets
-- Generate source-attributed responses
-- Combine qualitative findings with quantitative evidence
+✅ Official publications and technical reports
 
-Sparkscout is designed for policy analysis, energy planning, investment assessment, research support, and AI-enabled knowledge services where credibility and verifiability matter.
+✅ More than 800,000 historical energy observations
 
----
+✅ Country, regional, and global energy statistics
 
-# Why Sparkscout?
+✅ Public finance and investment data
 
-The challenge facing many AI-enabled analytical workflows is not generating answers. It is establishing confidence in those answers.
+✅ Automated citations and source attribution
 
-While foundation models can synthesize information effectively, they cannot independently verify the provenance of statistics, recommendations, or policy conclusions. For organisations operating in the energy sector, this creates limitations around transparency, reproducibility, and institutional trust.
+✅ Combined qualitative and quantitative analysis
 
-Sparkscout addresses this challenge by connecting AI systems directly to curated energy datasets and official publications.
-
-| Conventional AI Workflow | Sparkscout-Enabled Workflow |
-|--------------------------|-----------------------------|
-| Relies primarily on model memory | Accesses authoritative source material |
-| Limited traceability of evidence | Source-linked responses |
-| Difficult to validate statistics | Direct access to structured datasets |
-| Separate workflows for reports and data | Unified analytical environment |
-| Manual citation processes | Automated source attribution |
-
-The result is an AI workflow that is better aligned with the standards expected by governments, international organisations, development institutions, researchers, and energy-sector decision makers.
+Whether you are preparing a ministerial briefing, conducting policy analysis, building an AI assistant, or exploring energy transition trends, Sparkscout allows AI systems to move beyond plausible answers and toward evidence-based outputs.
 
 ---
 
-# Core Capabilities
+# 🎯 Why Sparkscout?
 
-## Knowledge Retrieval
+Large language models are exceptionally good at synthesizing information.
 
-Search across a growing collection of energy publications, technical reports, analytical studies, and policy documents.
+Their limitation is not analysis. Their limitation is access to trusted, verifiable evidence.
+
+Sparkscout addresses this challenge by connecting AI systems directly to curated publications and structured datasets through MCP.
+
+| Conventional AI Workflow | Sparkscout Workflow |
+|--------------------------|--------------------|
+| Relies primarily on model memory | Grounded in authoritative sources |
+| Difficult to verify statistics | Direct access to structured datasets |
+| Limited traceability | Built-in citations |
+| Publications and data exist in separate workflows | Unified analytical environment |
+| Manual evidence gathering | Retrieval and analysis through a single interface |
+
+For organisations operating in energy planning, policy development, investment analysis, research, and technical cooperation, this provides a stronger foundation for AI-assisted decision support.
+
+---
+
+# 🔎 What Your AI Agent Can Access
+
+## 📚 Publications & Knowledge Retrieval
+
+Search across technical reports, policy papers, flagship publications, analytical studies, and knowledge products.
 
 Capabilities include:
 
-- Full-text semantic and BM25 retrieval
-- Section- and chapter-level access
-- Publication metadata discovery
+- Full-text BM25 retrieval
+- Section-level access
+- Chapter-level extraction
+- Report metadata exploration
 - Citation generation
-- Retrieval of supporting evidence for AI outputs
+- Evidence retrieval for AI workflows
 
 ---
 
-## Statistical Intelligence
+## 📊 Energy Statistics & Analytical Data
 
 Access structured datasets covering:
 
@@ -71,55 +78,31 @@ Access structured datasets covering:
 - Public financial flows
 - Regional energy indicators
 
-Data can be filtered, aggregated, and analysed through natural language interactions.
+Datasets can be queried, filtered, aggregated, and combined through natural language interactions.
 
 ---
 
-## Evidence-Based Responses
+## 🔗 Source Attribution
 
-Sparkscout enables AI systems to produce responses supported by identifiable sources.
+Responses generated through Sparkscout can preserve references to supporting evidence.
 
 Example:
 
 ```text
-Solar photovoltaic capacity in Germany increased substantially between 2015 and 2024.
+Germany's solar PV capacity more than doubled between 2015 and 2024.
 [data: country_capacity]
 
-Grid expansion should be accompanied by investments in flexibility resources and system integration measures.
+Recent energy transition analyses emphasise that renewable deployment should be accompanied by investments in storage, flexibility, and grid infrastructure.
 [reports: world-energy-transition-outlook]
 ```
 
-This provides transparency for users while maintaining the analytical strengths of large language models.
+This improves transparency and allows users to trace findings back to their source.
 
 ---
 
-# Typical Applications
+# 🚀 Getting Started
 
-### Energy Planning and Modelling
-
-Support assessments of generation capacity, renewable deployment trends, electrification pathways, and regional energy transitions.
-
-### Policy and Regulatory Analysis
-
-Connect policy recommendations from official publications with relevant supporting data.
-
-### Investment and Market Intelligence
-
-Analyse technology deployment, public financial flows, and long-term energy investment trends.
-
-### Research and Knowledge Services
-
-Accelerate literature reviews, evidence gathering, and citation management.
-
-### AI Copilots and Digital Assistants
-
-Equip institutional AI assistants with trusted energy-sector knowledge and verifiable sources.
-
----
-
-# Getting Started
-
-Add the following configuration to your MCP-compatible client.
+Add Sparkscout MCP to your MCP-compatible client.
 
 ```json
 {
@@ -134,53 +117,192 @@ Add the following configuration to your MCP-compatible client.
 }
 ```
 
-Supported environments include:
+## ✅ Supported Environments
 
 - Claude Desktop
 - Cursor
+- Windsurf
 - Microsoft Copilot Studio
 - AI Gateway deployments
-- MCP-compatible enterprise assistants
+- Any MCP-compatible platform
 
 ---
 
-# Example Analytical Questions
+# 💡 Example Questions
 
-### Energy Transition Assessment
-
-> Compare solar capacity growth in Germany between 2015 and 2024 with recommendations on grid flexibility contained in recent energy transition publications.
-
-### Public Finance Analysis
-
-> Identify the countries receiving the highest levels of public investment for wind energy deployment in 2023.
-
-### Regional Infrastructure Planning
-
-> Quantify off-grid solar deployment in Sub-Saharan Africa between 2018 and 2024 and summarise key regional trends.
-
-### Evidence Review
-
-> Summarise recommendations related to transmission planning across recent flagship publications.
-
-### Executive Briefing
-
-> Prepare a short briefing on renewable energy deployment in Southeast Asia using recent statistics and supporting references.
+The true value of Sparkscout lies in combining evidence retrieval and statistical analysis in a single workflow.
 
 ---
 
-# Statistical Datasets
+## ⚡ Renewable Energy Deployment
 
-Sparkscout provides access to curated energy statistics through a unified query layer.
+> How has solar PV deployment evolved in Germany since 2015, and how does this compare with recommendations on grid flexibility and storage contained in recent energy transition reports?
 
-Country identifiers are automatically harmonised.
+**Combines**
+
+- Publication retrieval
+- Capacity statistics
+- Citation generation
+
+**Outputs**
+
+- Historical solar deployment trends
+- Capacity additions by year
+- Relevant policy recommendations
+- Supporting references
+
+---
+
+## 🔌 Grid Planning & System Integration
+
+> Which regions have experienced the fastest growth in wind and solar capacity, and what transmission and flexibility measures are recommended to maintain system reliability?
+
+**Combines**
+
+- Regional capacity datasets
+- Publication search
+- Analytical synthesis
+
+**Outputs**
+
+- Regional growth comparisons
+- Grid infrastructure implications
+- System integration recommendations
+- Source-backed evidence
+
+---
+
+## 🌍 Regional Energy Transition Assessment
+
+> Compare renewable electricity generation growth across Southeast Asia between 2010 and 2024 and identify the technologies driving the largest increases.
+
+**Combines**
+
+- Generation datasets
+- Technology-level analysis
+- Trend identification
+
+**Outputs**
+
+- Regional growth trends
+- Technology contributions
+- Country highlights
+- Supporting statistics
+
+---
+
+## 💰 Investment & Finance
+
+> Which countries received the largest public financial flows for wind energy between 2020 and 2024, and how does investment compare to deployment outcomes?
+
+**Combines**
+
+- Public finance datasets
+- Capacity statistics
+- Cross-dataset analysis
+
+**Outputs**
+
+- Investment rankings
+- Deployment outcomes
+- Regional comparisons
+- Evidence-based observations
+
+---
+
+## 🏝️ Energy Access
+
+> How much off-grid solar capacity has been deployed across Sub-Saharan Africa since 2018, and what lessons emerge from recent publications on energy access strategies?
+
+**Combines**
+
+- Capacity datasets
+- Regional analysis
+- Publication retrieval
+
+**Outputs**
+
+- Deployment statistics
+- Leading countries
+- Policy insights
+- Citation-ready references
+
+---
+
+## ⚙️ National Energy Transition Briefing
+
+> Prepare an executive briefing on India's renewable energy transition covering capacity growth, electricity generation, renewable energy shares, and recent policy recommendations.
+
+**Combines**
+
+- Multiple datasets
+- Publication search
+- Automated summarisation
+
+**Outputs**
+
+- Executive summary
+- Statistical profile
+- Key transition trends
+- Supporting citations
+
+---
+
+## 🌡️ Heat Sector Decarbonisation
+
+> Evaluate renewable heat generation trends across Europe and identify technologies showing the strongest growth over the last decade.
+
+**Combines**
+
+- Heat generation datasets
+- Trend analysis
+- Comparative assessment
+
+**Outputs**
+
+- Technology trends
+- Regional comparisons
+- Long-term growth patterns
+- Statistical evidence
+
+---
+
+## 🏛️ Ministerial & COP Briefings
+
+> Prepare a briefing for energy ministers on power sector transformation, highlighting renewable deployment trends, investment flows, and recommendations from recent flagship publications.
+
+**Combines**
+
+- Publications
+- Capacity statistics
+- Generation statistics
+- Investment data
+
+**Outputs**
+
+- Executive narrative
+- Key evidence
+- Strategic messages
+- Full source attribution
+
+---
+
+# 🗄️ Available Datasets
+
+Sparkscout provides access to curated statistical datasets through a unified analytical layer.
+
+Country codes are automatically harmonised.
 
 ```text
 DEU → Germany
 BRA → Brazil
 IND → India
+EGY → Egypt
 ```
 
-## Power Capacity
+---
+
+## ⚡ Power Capacity
 
 ### `country_capacity`
 
@@ -192,7 +314,11 @@ Installed power generation capacity by country and technology.
 - 26 technologies
 - 2000–2025
 
-**Unit:** MW
+**Unit**
+
+- MW
+
+---
 
 ### `region_capacity`
 
@@ -203,11 +329,13 @@ Installed power generation capacity by world region.
 - 10 regions
 - 13 technologies
 
-**Unit:** MW
+**Unit**
+
+- MW
 
 ---
 
-## Electricity Generation
+## 🔌 Electricity Generation
 
 ### `country_generation`
 
@@ -219,7 +347,11 @@ Electricity generation by country and technology.
 - 21 technologies
 - 2000–2024
 
-**Unit:** GWh
+**Unit**
+
+- GWh
+
+---
 
 ### `region_generation`
 
@@ -230,40 +362,46 @@ Electricity generation by region.
 - 10 regions
 - 12 technologies
 
-**Unit:** GWh
+**Unit**
+
+- GWh
 
 ---
 
-## Renewable Energy Indicators
+## ♻️ Renewable Energy Indicators
 
 ### `re_share`
 
-Renewable energy shares based on installed capacity and electricity generation.
+Renewable energy share of total capacity and generation.
 
 **Coverage**
 
 - 233 countries and regions
 
-**Unit:** %
+**Unit**
+
+- %
 
 ---
 
-## Heat Statistics
+## 🌡️ Heat Statistics
 
 ### `heat_generation`
 
-Heat generation by technology and country.
+Heat generation by country and technology.
 
 **Coverage**
 
 - 52 countries
 - 13 technologies
 
-**Unit:** TJ
+**Unit**
+
+- TJ
 
 ---
 
-## Public Finance
+## 💰 Public Finance
 
 ### `public_investments`
 
@@ -273,43 +411,72 @@ Public financial flows supporting energy technologies.
 
 - 201 countries
 
-**Unit:** USD million (constant 2022 prices)
+**Unit**
+
+- USD million (constant 2022 prices)
 
 ---
 
-# MCP Tools
+# 🛠️ MCP Tools
 
-Sparkscout exposes specialised tools for both document retrieval and statistical analysis.
+Sparkscout exposes specialised MCP tools for knowledge retrieval, statistical analysis, and guided discovery.
 
-## Publications
+---
+
+## 📖 Publication Tools
 
 ### `sparkscout_search_reports`
 
-Search across publication content and retrieve the most relevant excerpts.
+Search across indexed publications and return the most relevant excerpts.
 
-### `sparkscout_get_report`
+**Best for**
 
-Access complete publications or individual sections.
-
-### `sparkscout_list_reports`
-
-Browse available reports and publication metadata.
-
-### `sparkscout_cite`
-
-Generate publication citations in standard formats.
+- Literature reviews
+- Policy research
+- Evidence gathering
 
 ---
 
-## Datasets
+### `sparkscout_get_report`
+
+Retrieve complete reports or specific sections.
+
+**Best for**
+
+- Source review
+- Chapter extraction
+- Technical analysis
+
+---
+
+### `sparkscout_list_reports`
+
+Browse available publications, years, metadata, and structures.
+
+---
+
+### `sparkscout_cite`
+
+Generate publication citations.
+
+Supported formats:
+
+- APA 7
+- Raw metadata
+
+---
+
+## 📊 Dataset Tools
 
 ### `sparkscout_query_dataset`
 
-Execute filtered dataset queries.
+Execute filtered analytical queries against datasets.
+
+---
 
 ### `sparkscout_query_dataset_aggregations`
 
-Perform grouped calculations and aggregations.
+Perform grouped calculations.
 
 Supported functions:
 
@@ -321,66 +488,123 @@ MAX
 COUNT
 ```
 
+---
+
 ### `sparkscout_get_dataset_meta`
 
-Inspect schemas, variables, dimensions, and units.
+Inspect:
+
+- Columns
+- Units
+- Filters
+- Dimensions
+- Valid values
+
+---
 
 ### `sparkscout_get_dataset_value`
 
-Retrieve individual metrics.
+Retrieve individual metrics or observations.
+
+---
 
 ### `sparkscout_sample_dataset`
 
-Explore representative sample records.
+Explore representative records before querying.
+
+---
 
 ### `sparkscout_list_datasets`
 
-View available datasets and coverage information.
+View dataset inventories, schemas, coverage periods, and metadata.
 
 ---
 
-## Guided Question Answering
+## 🧠 Intelligent Question Routing
 
 ### `sparkscout_answer_question`
 
-A high-level orchestration tool that:
+Recommended starting point for most users.
 
-1. Interprets the user's question
-2. Identifies relevant publications
-3. Suggests applicable datasets
-4. Provides supporting evidence for further analysis
+The tool:
 
-For most analytical workflows, this is the recommended entry point.
+1. Interprets the question
+2. Searches relevant publications
+3. Identifies candidate datasets
+4. Returns supporting evidence
+5. Suggests analytical next steps
+
+Ideal for exploratory analysis and first-pass research.
 
 ---
 
-# Analytical Workflow
+# 🔄 How Sparkscout Works
 
 ```text
 Policy Question
-        │
-        ▼
+      │
+      ▼
 Publication Discovery
-        │
-        ▼
+      │
+      ▼
 Evidence Retrieval
-        │
-        ▼
+      │
+      ▼
 Dataset Identification
-        │
-        ▼
+      │
+      ▼
 Statistical Analysis
-        │
-        ▼
+      │
+      ▼
 Source-Attributed Insight
 ```
 
 ---
 
-# Designed for Evidence
+# 🎯 Typical Use Cases
 
-Sparkscout reflects a simple principle:
+## 🏛️ Policy Analysis
 
-> Analytical quality depends not only on the sophistication of the model, but on the quality, transparency, and provenance of the information available to it.
+Assess how deployment trends align with recommendations contained in policy and technical publications.
 
-By integrating publications, statistical datasets, and source attribution within a single MCP interface, Sparkscout supports AI-enabled workflows that meet the expectations of governments, international organisations, research institutions, development partners, and energy-sector practitioners.
+---
+
+## ⚙️ Energy Planning & Modelling
+
+Support analyses of renewable deployment, power system evolution, resource adequacy, and long-term planning.
+
+---
+
+## 💵 Investment Analysis
+
+Track public financial flows, compare investment trends, and assess deployment outcomes.
+
+---
+
+## 📑 Research & Technical Reporting
+
+Accelerate evidence gathering, citation management, and analytical workflows.
+
+---
+
+## 🤖 AI Assistants & Knowledge Platforms
+
+Equip organisational AI assistants with trusted energy-sector knowledge and verifiable sources.
+
+---
+
+## 🌐 International Cooperation
+
+Support analytical work conducted by governments, development banks, international organisations, research institutions, and technical partners.
+
+---
+
+# ✅ Designed for Evidence
+
+Sparkscout is built on a simple principle:
+
+> The quality of AI-generated insight depends on the quality, transparency, and provenance of the information available to the model.
+
+By combining publication retrieval, statistical analysis, and source attribution within a single MCP interface, Sparkscout enables AI systems to produce outputs that are not only useful, but also traceable, reproducible, and grounded in evidence.
+
+For organisations working at the intersection of energy, policy, finance, technology, and international cooperation, Sparkscout provides a foundation for more trusted AI-enabled analytical workflows.
