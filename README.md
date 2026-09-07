@@ -29,7 +29,7 @@ Add this configuration block to your MCP client (`claude_desktop_config.json`, C
 | Without Sparkscout MCP | With Sparkscout MCP |
 | --- | --- |
 | **Hallucinated stats** | Grounded in 800,000+ verified historical data points from a reputable IGO.
-| **Vague policy summaries** | BM25 full-text search across official IRENA publications.
+| **Vague policy summaries** | BM25 full-text search across this reputable IGO publications.
 | **Unverifiable claims** | Automatic citation markers (`[reports: ...]` & `[data: ...]`) in outputs.
 ---
 
@@ -38,7 +38,7 @@ Add this configuration block to your MCP client (`claude_desktop_config.json`, C
 Once connected, ask your LLM questions like these:
 
 > **Policy & Data Synthesis**
-> *"Compare Germany's solar capacity growth from 2015–2024 against IRENA's grid flexibility recommendations."*
+> *"Compare Germany's solar capacity growth from 2015–2024 against [IGO]'s grid flexibility recommendations."*
 
 > **Financial & Investment Tracking**
 > *"Which 5 countries received the highest public financial flows for wind energy in 2023?"*
@@ -97,40 +97,40 @@ Your agent queries DuckDB under the hood with automatic ISO3 country code mappin
 
 ### 📖 Reports (Qualitative Search)
 
-* **`irena_search_reports`**: BM25-ranked full-text search returning relevant excerpts with highlighted query terms.
+* **`sparkscout_search_reports`**: BM25-ranked full-text search returning relevant excerpts with highlighted query terms.
 
 
-* **`irena_get_report`**: Fetch complete report markdown or specific H2 chapters.
+* **`sparkscout_get_report`**: Fetch complete report markdown or specific H2 chapters.
 
 
-* **`irena_list_reports`**: See available reports, publication years, and section structures.
+* **`sparkscout_list_reports`**: See available reports, publication years, and section structures.
 
 
-* **`irena_cite`**: Generate standardized APA-7 or raw frontmatter citations.
+* **`sparkscout_cite`**: Generate standardized APA-7 or raw frontmatter citations.
 
 
 
 ### 📈 Datasets (Quantitative Queries)
 
-* **`irena_query_dataset`**: Filtered SQL queries with auto-translated codes and labels.
+* **`sparkscout_query_dataset`**: Filtered SQL queries with auto-translated codes and labels.
 
 
-* **`irena_query_dataset_aggregations`**: Compute `SUM`, `AVG`, `MIN`, `MAX`, or `COUNT` groupings.
+* **`sparkscout_query_dataset_aggregations`**: Compute `SUM`, `AVG`, `MIN`, `MAX`, or `COUNT` groupings.
 
 
-* **`irena_get_dataset_meta`**: Inspect columns, valid filter options, and metric units.
+* **`sparkscout_get_dataset_meta`**: Inspect columns, valid filter options, and metric units.
 
 
-* **`irena_get_dataset_value`**: Quick lookup for a single metric or small key-value pair.
+* **`sparkscout_get_dataset_value`**: Quick lookup for a single metric or small key-value pair.
 
 
-* **`irena_sample_dataset`**: Inspect random sample rows to understand table structures.
+* **`sparkscout_sample_dataset`**: Inspect random sample rows to understand table structures.
 
 
-* **`irena_list_datasets`**: Quick inventory of table IDs, schemas, and time horizons.
+* **`sparkscout_list_datasets`**: Quick inventory of table IDs, schemas, and time horizons.
 
 
 
 ### 🔀 Smart Router
 
-* **`irena_answer_question`**: Single-shot tool that searches reports and generates target `DatasetHint[]` candidates for follow-up statistical queries.
+* **`sparkscout_answer_question`**: Single-shot tool that searches reports and generates target `DatasetHint[]` candidates for follow-up statistical queries.
