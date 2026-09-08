@@ -7,44 +7,26 @@
 
 # SparkScout MCP
 
-A Model Context Protocol server that gives AI assistants and agents clean access to authoritative renewable energy data.
+Renewable energy data for AI assistants, with the source attached.
 
 > [!IMPORTANT]
-> **Project status: pre-release, single-operator deployment.** This repository contains the source code and the public documentation; the live MCP endpoint is not yet open for general registration. If you want to run the server yourself, the Quickstart below gets you a working instance in five commands. The status callout further down this README sets out what the corpus covers today, what is not yet covered, and what to expect from the next refresh.
+> **Project status: pre-release, single-operator deployment.** The repository contains the source code and the public documentation; the live MCP endpoint is not yet open for general registration. The Quickstart below gets you a working instance in five commands. The Status section further down sets out what the corpus covers today, what is not yet covered, and what to expect from the next refresh.
 >
-> The seven statistical datasets and the publication corpus are governed by the upstream publisher's terms of use; see `NOTICE` for the attribution and reuse rules.
+> The seven statistical datasets and the publication corpus are governed by the upstream publisher's terms of use; see `NOTICE` for attribution and reuse rules.
 
 ---
 
 ## Why this exists
 
-Most AI assistants answer questions about renewable energy by recalling what they read during training. That is fine for general background, and not fine for the kind of question where the answer has to be defensible: briefings that will be reviewed, policy notes that will be cited, investment memos that will be challenged, technical answers for analysts who can pull the source up.
+Most AI assistants answer questions about renewable energy by recalling what they read during training. That works for general background and not for the kind of question where the answer has to be defensible: briefings that will be reviewed, policy notes that will be cited, investment memos that will be challenged, technical answers for analysts who can pull the source up.
 
-SparkScout closes that gap by giving the assistant a thin interface to a curated corpus: published reports from a reputable international organisation, and a set of structured statistical tables with country, technology, year, and investment dimensions. Every response carries the citation needed to trace the answer back to the source. The trade is small: the assistant has to call a tool, and the corpus has to be refreshed periodically from upstream.
-
----
-
-## For non-technical readers
-
-🧭 **What this is.** A small server that lets an AI assistant answer questions about renewable energy using real, citable data, instead of guessing. The assistant asks SparkScout, SparkScout looks up the answer in published reports and curated statistics, and SparkScout hands back the answer with the source attached.
-
-🌍 **What kind of questions it handles.** Questions like "How fast is solar power growing in West Africa?", "Which countries received the most public investment for renewable energy between 2010 and 2020?", or "Compare renewable capacity growth in Southeast Asia from 2010 to 2024 and identify which technologies led". The same workflow covers quick facts ("What is Brazil's hydro capacity?") and longer questions that need a few datasets and a few publications woven together.
-
-🔎 **What the answer looks like.** Findings come back with the proof attached. A claim about solar capacity will carry the dataset name, the year, and the country code that backs it. A claim from a report will carry the publication title and citation. Every response has a paper trail.
-
-💡 **Why this matters.** Most AI assistants are confident-sounding but rely on memory. SparkScout is a way to make the assistant useful for decisions that need evidence: briefings, policy notes, investment memos, research summaries, technical answers for analysts.
-
-📚 **Where the data comes from.** The server is a thin interface over publicly available renewable energy statistics and publications. The statistics are refreshed periodically from the upstream source; the publications are a curated corpus of public reports. Both are governed by the upstream publisher's terms of use, summarised in `NOTICE`.
+SparkScout closes that gap. It gives the assistant a thin interface to a curated corpus: published reports from a reputable international organisation, and a set of structured statistical tables with country, technology, year, and investment dimensions. Every response carries the citation needed to trace the answer back to the source. The trade is small: the assistant has to call a tool, and the corpus has to be refreshed periodically from upstream.
 
 ---
 
 ## What it does
 
-An AI client connected to SparkScout can:
-
-- Search a corpus of energy publications by natural-language question, retrieve chapter-level excerpts, and produce formatted citations.
-- Query statistical datasets with structured filters, run grouped aggregations, sample rows, and retrieve scalar values.
-- Combine the two: take a question, find the most relevant publications, and surface the datasets that hold the quantitative answer.
+The server exposes 11 MCP tools over two backends. A natural-language question can be answered end to end: search the report corpus, retrieve a chapter, surface the dataset that holds the quantitative answer, and return both with citations. The same tools also serve quick factual queries: "What is Brazil's hydro capacity?", "How fast is solar power growing in West Africa?", "Which countries received the most public investment for renewable energy between 2010 and 2020?".
 
 The corpus at this revision holds 56 publications and 7 statistical datasets (196,314 rows) covering power capacity, electricity generation, renewable energy shares, heat generation, and public finance flows.
 
@@ -52,7 +34,7 @@ The corpus at this revision holds 56 publications and 7 statistical datasets (19
 
 ## Status of the corpus
 
-The numbers and corpus size below are pulled live from the DuckDB snapshot at the time of this revision (2026-09-08). Run `sparkscout_list_datasets` against the running server to refresh after pulling a new snapshot.
+The numbers below are pulled live from the DuckDB snapshot at the time of this revision (2026-09-08). Run `sparkscout_list_datasets` against the running server to refresh after pulling a new snapshot.
 
 ### Statistical datasets
 
@@ -68,9 +50,9 @@ The numbers and corpus size below are pulled live from the DuckDB snapshot at th
 
 ### Publications
 
-56 markdown reports currently indexed. The corpus covers energy transition outlooks, technology briefings (solar, wind, hydrogen, storage), regional analyses, and policy briefs. Year, ISBN, and citation are extracted from each report's frontmatter.
+56 markdown reports indexed. Energy transition outlooks, technology briefings (solar, wind, hydrogen, storage), regional analyses, policy briefs. Year, ISBN, and citation are extracted from each report's frontmatter.
 
-### What is covered today
+### Covered today
 
 - Installed power generation capacity and electricity generation by country and technology.
 - Renewable share of capacity and generation.
@@ -78,7 +60,7 @@ The numbers and corpus size below are pulled live from the DuckDB snapshot at th
 - Public financial flows for renewable energy by recipient country and technology.
 - Full-text search across the indexed publication corpus, with chapter-level retrieval and citation.
 
-### What is not covered yet
+### Not covered yet
 
 - **Cost data** (LCOE, capex, opex, levelised cost of storage). The upstream source publishes these as separate datasets; they are not in the current DuckDB snapshot.
 - **Project-level data** (individual power plants, project pipelines, financial deals). The current datasets are aggregate country and region views.
