@@ -1,3 +1,9 @@
+![License](https://img.shields.io/badge/license-MIT%20%2B%20IP%20carve--out-blue)
+![Python](https://img.shields.io/badge/python-3.13%2B-blue)
+![MCP](https://img.shields.io/badge/MCP-FastMCP%204.0-purple)
+![Datasets](https://img.shields.io/badge/datasets-7-green)
+![Observations](https://img.shields.io/badge/observations-196k-green)
+
 # SparkScout MCP
 
 A Model Context Protocol server that gives AI assistants and agents clean access to authoritative renewable energy data.
@@ -8,7 +14,7 @@ A Model Context Protocol server that gives AI assistants and agents clean access
 
 🧭 **What this is.** A small server that lets an AI assistant answer questions about renewable energy using real, citable data, instead of guessing. The assistant asks SparkScout, SparkScout looks up the answer in published reports and curated statistics, and SparkScout hands back the answer with the source attached.
 
-🌍 **What kind of questions it handles.** Questions like "How fast is solar power growing in West Africa?", "Which countries invested the most in wind energy last year?", or "What does the latest energy-transition briefing say about green hydrogen costs?". The same workflow covers quick facts ("What is Brazil's hydro capacity?") and longer questions ("Compare renewable growth in Southeast Asia between 2010 and 2024 and identify which technologies led").
+🌍 **What kind of questions it handles.** Questions like "How fast is solar power growing in West Africa?", "Which countries received the most public investment for renewable energy between 2010 and 2020?", or "Compare renewable capacity growth in Southeast Asia from 2010 to 2024 and identify which technologies led". The same workflow covers quick facts ("What is Brazil's hydro capacity?") and longer questions that need a few datasets and a few publications woven together.
 
 🔎 **What the answer looks like.** Findings come back with the proof attached. A claim about solar capacity will carry the dataset name, the year, and the country code that backs it. A claim from a report will carry the publication title and citation. Every response has a paper trail.
 
@@ -134,7 +140,7 @@ Live coverage pulled from DuckDB on this revision:
 | `region_generation` | 2,615 | 2000-2024 | GWh | region, technology, data type, year |
 | `re_share` | 10,826 | 2000-2025 | percent | region/country, indicator, year |
 | `heat_generation` | 9,708 | 2000-2024 | TJ | country, technology, grid connection, year |
-| `public_investments` | 8,078 | 2000-2024 | Million USD (2022 prices) | country, technology, year |
+| `public_investments` | 8,078 | 2001-2023 | Million USD (2022 prices) | country, technology, year |
 
 To refresh these counts after pulling a new snapshot, run `sparkscout_list_datasets` against the live server. Filter labels are resolved against the dimension tables: `countries`, `technologies`, `years`, `regions`, `indicators`, `data_type`, `grid_connection`. Common aliases such as `Solar PV`, `Wind`, `Hydro` resolve to the same codes an analyst would type.
 
