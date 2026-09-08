@@ -5,7 +5,7 @@
 ![Observations](https://img.shields.io/badge/IRENA%20observations-196k-green)
 ![Status](https://img.shields.io/badge/status-pre--release-orange)
 
-# SparkScout MCP
+# ✨ SparkScout MCP
 
 Renewable energy data for AI assistants, with the source attached.
 
@@ -16,9 +16,9 @@ Renewable energy data for AI assistants, with the source attached.
 
 ---
 
-## In plain language
+## 🧭 Overview
 
-SparkScout is a question-answering service for renewable energy. You ask it a question about solar power, wind power, hydro, heat, electricity generation, public investment in clean energy, or one of the major country or regional reports from IRENA, the International Renewable Energy Agency, and it gives you an answer drawn from IRENA's published data and reports. Every figure it returns is tagged with the IRENA publication or dataset the figure came from, so you can verify it against the source.
+SparkScout is a question-answering service for renewable energy. You ask it a question about solar power, wind power, hydro, heat, electricity generation, public investment in clean energy, or one of the major country or regional reports from a reputable IGO, and it gives you an answer drawn from that IGO's published data and reports. Every figure it returns is tagged with the publication or dataset the figure came from, so you can verify it against the source.
 
 The service is meant for situations where the answer has to be defensible: briefings that will be reviewed, policy notes that will be cited, investment memos that will be challenged, technical answers for analysts who will pull the original up. The trade is small on your end: the answer comes with the citation, and the citation is what makes the answer usable.
 
@@ -27,14 +27,14 @@ Examples of questions the service can answer:
 - What was Brazil's installed solar capacity in 2024?
 - How fast has wind power grown in West Africa over the last decade?
 - Which countries received the most public investment for renewable energy between 2010 and 2020?
-- What does the most recent IRENA renewable capacity statistics report say about capacity additions in 2024?
-- Which IRENA report covers geothermal heat generation in East Africa, and what is its main finding?
+- What does the most recent renewable capacity statistics report say about capacity additions in 2024?
+- Which report covers geothermal heat generation in East Africa, and what is its main finding?
 
 The rest of this README documents the same service in technical terms: the data sources, the ingestion pipeline, the corpus coverage, the architecture, and how to run a local instance. Read on if any of that is relevant to what you need to do. If you only need the answer to a question, you do not need anything below this section; the citation comes back with the answer.
 
 ---
 
-## Why this exists
+## 🎯 Why this exists
 
 Most AI assistants answer questions about renewable energy by recalling what they read during training. That works for general background and not for the kind of question where the answer has to be defensible: briefings that will be reviewed, policy notes that will be cited, investment memos that will be challenged, technical answers for analysts who can pull the source up.
 
@@ -42,7 +42,7 @@ SparkScout closes that gap. It gives the assistant a thin interface to a curated
 
 ---
 
-## What it does
+## 🛠 What it does
 
 The server exposes 11 MCP tools over two backends. A natural-language question can be answered end to end: search the report corpus, retrieve a chapter, surface the dataset that holds the quantitative answer, and return both with citations. The same tools also serve quick factual queries: "What is Brazil's hydro capacity?", "How fast is solar power growing in West Africa?", "Which countries received the most public investment for renewable energy between 2010 and 2020?".
 
@@ -50,7 +50,7 @@ The corpus at this revision holds 56 publications and 7 statistical datasets (19
 
 ---
 
-## Status of the corpus
+## 📊 Status of the corpus
 
 The numbers below are pulled live from the DuckDB snapshot at the time of this revision (2026-09-08). Run `sparkscout_list_datasets` against the running server to refresh after pulling a new snapshot.
 
@@ -88,7 +88,7 @@ The numbers below are pulled live from the DuckDB snapshot at the time of this r
 
 ---
 
-## PxWeb to DuckDB ingestion
+## 🔌 PxWeb to DuckDB ingestion
 
 The seven statistical datasets are sourced from the IRENA Statistics PxWeb API (`https://pxweb.irena.org/api/v1/en/IRENASTAT`) and persisted to a single read-only DuckDB file at `data/irena/irena.duckdb`. The ingestion script is not part of this repository; it runs out of band on the operator's host and is invoked manually or by cron to refresh the snapshot. The MCP server reads the DuckDB file as-is and never executes the crawler.
 
@@ -169,7 +169,7 @@ Each fact row carries a `source` column populated with the verbatim attribution 
 
 ---
 
-## Markdown report ingestion
+## 📄 Markdown report ingestion
 
 The publication half of the corpus is a flat directory of Markdown files at `data/reports/`. Each file is one IRENA publication: front matter, body, figures described in text. The MCP server treats the directory as the source of truth and rebuilds an in-memory full-text index from it on every container start and on `SIGHUP`. No external database is involved for the report half; the index lives in SQLite's FTS5 engine, scoped to the process lifetime, and is rebuilt from disk on each refresh rather than incrementally updated.
 
@@ -257,7 +257,7 @@ The DuckDB half of the corpus is unaffected by the report refresh; the two backe
 
 ---
 
-## Repository layout
+## 🗂 Repository layout
 
 ```
 sparkscout/
@@ -277,7 +277,7 @@ sparkscout/
 └── .gitignore                 Excludes operator-only paths
 ```
 
-## Tools
+## 🔧 Tools
 
 | Tool | Layer | Purpose |
 |---|---|---|
@@ -295,7 +295,7 @@ sparkscout/
 
 All 11 tools return JSON. Dataset responses include an inline citation block in the form `[data: <dataset_id>, rows=N, filter=...]`.
 
-## Data path
+## 🛰 Data path
 
 ```
               ┌────────────────────────┐
@@ -320,7 +320,7 @@ All 11 tools return JSON. Dataset responses include an inline citation block in 
 
 Two storage backends, both read-only at runtime. DuckDB serves the 7 statistical tables; the FTS5 index is rebuilt from the markdown folder on startup or on SIGHUP.
 
-## Quickstart
+## 🚀 Quickstart
 
 Prerequisites: Python 3.13+, [uv](https://docs.astral.sh/uv/), DuckDB 1.1.3, FastMCP 4.0.0, the upstream DuckDB snapshot at `./data/irena/irena.duckdb`, and the report markdowns at `./data/reports/`.
 
@@ -343,15 +343,15 @@ curl http://127.0.0.1:8000/health
 
 The server binds to `0.0.0.0:8000`. The MCP client config for a live hosted endpoint is not yet published; deployment information will be added when public access is opened.
 
-## Architecture choices
+## 🏛 Architecture choices
 
 - SQL is built with parameter binding. Dataset identifiers and column names are whitelisted against the in-process `TABLE_SCHEMAS` map before any query is constructed; no string interpolation touches user input.
 - The FTS5 index is in-memory and rebuilt on SIGHUP. A single SIGHUP to the process refreshes both DuckDB and the report index without dropping connections.
 - The container runs with a read-only root filesystem. Writable state is confined to named tmpfs volumes for the `uv` cache.
 
-## Tests
+## 🧪 Tests
 
-The repository ships with manual verification scripts under `references/sparkscout-debug-recipes-2026-09-07.md`. Automated tests are not yet wired. To run the existing verifiers:
+The repository ships with manual verification scripts that exercise the bug fixes from the initial release: technology alias resolution, plural-safe dim table lookup, and natural-language question tokenisation. To run the existing verifiers:
 
 ```bash
 docker exec sparkscout bash -c 'ls /tmp/qa_*.py /tmp/trace_*.py'
@@ -360,15 +360,15 @@ docker exec sparkscout bash -c 'uv run --with duckdb==1.1.3 python /tmp/qa_fix_k
 
 The `qa_fix_*.py` scripts cover the bug fixes shipped in the initial release: technology alias resolution, plural-safe dim table lookup, and natural-language question tokenisation.
 
-## Known issues
+## ⚠️ Known issues
 
 - `sparkscout_search_reports` uses a phrase-quoted FTS5 query; multi-word natural-language questions work better through `sparkscout_answer_question`, which tokenises the question, drops stopwords, and OR-merges per-term BM25 hits.
 
-## License
+## 📜 License
 
 - SparkScout source code: see [LICENSE](./LICENSE). MIT with an appended clause covering intellectual property in upstream content.
 - Retrieved data and report text: see [NOTICE](./NOTICE). The statistics and publication text returned by this server remain subject to the upstream publisher's terms of use.
 
-## Acknowledgement
+## 🙏 Acknowledgement
 
 This server is a thin interface over publicly available renewable energy data. All statistical findings carry inline citations; all publication excerpts carry the original citation block. Reuse of retrieved content should preserve those citations.
