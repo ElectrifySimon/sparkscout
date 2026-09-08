@@ -1,7 +1,5 @@
 MIT License
 
-Copyright (c) 2026 Simon
-
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
@@ -19,3 +17,17 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+## Information Sources and Intellectual Property
+
+The MIT License applies solely to the Sparkscout MCP software, including its source code, interfaces, configurations, and associated software components.
+
+The publications, datasets, documents, metadata, statistics, images, reports, and other information that may be accessed, retrieved, indexed, queried, or referenced through Sparkscout MCP are not licensed under the MIT License unless explicitly stated otherwise by the respective rights holder.
+
+All such content remains subject to the intellectual property rights, copyright notices, terms of use, licensing conditions, and attribution requirements of the original source organisation or copyright owner.
+
+Use of information obtained through Sparkscout MCP does not grant ownership of, or any additional rights in, the underlying content. Users are solely responsible for ensuring that their use, reproduction, publication, distribution, citation, or commercial exploitation of any retrieved content complies with the applicable legal and licensing requirements established by the relevant rights holders.
+
+Nothing in this License shall be construed as granting any licence, permission, or right to reproduce, distribute, modify, create derivative works from, or otherwise exploit third-party content beyond the rights expressly granted by the applicable copyright holder.
+
+Where Sparkscout MCP provides access to publications, datasets, or other resources produced by international organisations, governmental bodies, research institutions, or third-party entities, such materials shall remain the property of their respective owners and shall be governed by their applicable copyright and usage policies.
