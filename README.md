@@ -1,23 +1,32 @@
 # SparkScout MCP
 
-A Model Context Protocol server that gives AI assistants and agents access to IRENA renewable energy data and publications.
+A Model Context Protocol server that gives AI assistants and agents clean access to authoritative renewable energy data.
 
-Two sources, one interface. The server exposes 11 tools over IRENA's structured statistics (DuckDB) and a corpus of IRENA reports (SQLite FTS5). Every response carries the citation needed to attribute findings back to the source dataset or publication.
+---
 
-![License](https://img.shields.io/badge/license-MIT%20%2B%20IRENA%20IP-blue)
-![Python](https://img.shields.io/badge/python-3.13%2B-blue)
-![MCP](https://img.shields.io/badge/MCP-FastMCP%204.0-purple)
-![Coverage](https://img.shields.io/badge/IRENA%20observations-196k-green)
+## For non-technical readers
+
+🧭 **What this is.** A small server that lets an AI assistant answer questions about renewable energy using real, citable data, instead of guessing. The assistant asks SparkScout, SparkScout looks up the answer in published reports and curated statistics, and SparkScout hands back the answer with the source attached.
+
+🌍 **What kind of questions it handles.** Questions like "How fast is solar power growing in West Africa?", "Which countries invested the most in wind energy last year?", or "What does the latest energy-transition briefing say about green hydrogen costs?". The same workflow covers quick facts ("What is Brazil's hydro capacity?") and longer questions ("Compare renewable growth in Southeast Asia between 2010 and 2024 and identify which technologies led").
+
+🔎 **What the answer looks like.** Findings come back with the proof attached. A claim about solar capacity will carry the dataset name, the year, and the country code that backs it. A claim from a report will carry the publication title and citation. Every response has a paper trail.
+
+💡 **Why this matters.** Most AI assistants are confident-sounding but rely on memory. SparkScout is a way to make the assistant useful for decisions that need evidence: briefings, policy notes, investment memos, research summaries, technical answers for analysts.
+
+📚 **Where the data comes from.** The server is a thin interface over publicly available renewable energy statistics and publications. The statistics are refreshed periodically from the upstream source; the publications are a curated corpus of public reports. Both are governed by the upstream publisher's terms of use, summarised in `NOTICE`.
+
+---
 
 ## What it does
 
 An AI client connected to SparkScout can:
 
-- Search IRENA publications by natural-language question, retrieve chapter-level excerpts, and produce formatted citations.
-- Query IRENA statistical datasets with structured filters, run grouped aggregations, sample rows, and retrieve scalar values.
-- Combine the two: take a question, find the most relevant reports, and surface the datasets that hold the quantitative answer.
+- Search a corpus of energy publications by natural-language question, retrieve chapter-level excerpts, and produce formatted citations.
+- Query statistical datasets with structured filters, run grouped aggregations, sample rows, and retrieve scalar values.
+- Combine the two: take a question, find the most relevant publications, and surface the datasets that hold the quantitative answer.
 
-The corpus at this revision holds 56 IRENA publications and 7 statistical datasets (196,314 rows) covering power capacity, electricity generation, renewable energy shares, heat generation, and public finance flows.
+The corpus at this revision holds 56 publications and 7 statistical datasets (196,314 rows) covering power capacity, electricity generation, renewable energy shares, heat generation, and public finance flows.
 
 ## Repository layout
 
@@ -34,7 +43,7 @@ sparkscout/
 │       ├── fusion.py          sparkscout_answer_question
 │       └── reports.py         4 report tools
 ├── docker-compose.yml         Local stack
-├── LICENSE                    MIT plus IRENA IP carve-out
+├── LICENSE                    MIT plus IP carve-out
 ├── NOTICE                     Third-party data attribution
 └── .gitignore                 Excludes operator-only paths
 ```
@@ -43,11 +52,11 @@ sparkscout/
 
 | Tool | Layer | Purpose |
 |---|---|---|
-| `sparkscout_list_reports` | reports | List IRENA publications in the corpus |
+| `sparkscout_list_reports` | reports | List publications in the corpus |
 | `sparkscout_get_report` | reports | Fetch a report body or single chapter |
 | `sparkscout_search_reports` | reports | BM25 full-text search across reports |
 | `sparkscout_cite` | reports | Formatted citation string |
-| `sparkscout_list_datasets` | datasets | List the 7 IRENA statistical datasets |
+| `sparkscout_list_datasets` | datasets | List the 7 statistical datasets |
 | `sparkscout_get_dataset_meta` | datasets | Schema and sample codes for one dataset |
 | `sparkscout_query_dataset` | datasets | Filtered, parameterised query with citations |
 | `sparkscout_query_dataset_aggregations` | datasets | Group-by with sum, avg, count, min, max |
@@ -84,7 +93,7 @@ Two storage backends, both read-only at runtime. DuckDB serves the 7 statistical
 
 ## Quickstart
 
-Prerequisites: Python 3.13+, [uv](https://docs.astral.sh/uv/), DuckDB 1.1.3, FastMCP 4.0.0, the IRENA DuckDB snapshot at `./data/irena/irena.duckdb`, and IRENA report markdowns at `./data/reports/`.
+Prerequisites: Python 3.13+, [uv](https://docs.astral.sh/uv/), DuckDB 1.1.3, FastMCP 4.0.0, the upstream DuckDB snapshot at `./data/irena/irena.duckdb`, and the report markdowns at `./data/reports/`.
 
 Clone, point at data, run:
 
@@ -92,7 +101,7 @@ Clone, point at data, run:
 git clone https://github.com/ElectrifySimon/sparkscout
 cd sparkscout
 
-# Place the IRENA DuckDB snapshot and the report markdown folder
+# Place the DuckDB snapshot and the report markdown folder
 mkdir -p data/irena data/reports
 # cp /path/to/irena.duckdb data/irena/
 # cp /path/to/reports/*.md data/reports/
@@ -127,7 +136,7 @@ Live coverage pulled from DuckDB on this revision:
 | `heat_generation` | 9,708 | 2000-2024 | TJ | country, technology, grid connection, year |
 | `public_investments` | 8,078 | 2000-2024 | Million USD (2022 prices) | country, technology, year |
 
-To refresh these counts after pulling new IRENA data, run `sparkscout_list_datasets` against the live server. Filter labels are resolved against the dimension tables: `countries`, `technologies`, `years`, `regions`, `indicators`, `data_type`, `grid_connection`. Common aliases such as `Solar PV`, `Wind`, `Hydro` resolve to the same PxWeb codes an analyst would type.
+To refresh these counts after pulling a new snapshot, run `sparkscout_list_datasets` against the live server. Filter labels are resolved against the dimension tables: `countries`, `technologies`, `years`, `regions`, `indicators`, `data_type`, `grid_connection`. Common aliases such as `Solar PV`, `Wind`, `Hydro` resolve to the same codes an analyst would type.
 
 ## Architecture choices
 
@@ -155,9 +164,9 @@ The `qa_fix_*.py` scripts cover the bug fixes shipped in the initial release: te
 
 ## License
 
-- SparkScout source code: see [LICENSE](./LICENSE). MIT with an appended clause covering intellectual property in IRENA-sourced content.
-- Retrieved IRENA content: see [NOTICE](./NOTICE). The statistics and publication text returned by this server remain subject to IRENA's own terms of use.
+- SparkScout source code: see [LICENSE](./LICENSE). MIT with an appended clause covering intellectual property in upstream content.
+- Retrieved data and report text: see [NOTICE](./NOTICE). The statistics and publication text returned by this server remain subject to the upstream publisher's terms of use.
 
 ## Acknowledgement
 
-This server is a thin interface over publicly available IRENA data. All statistical findings carry inline citations; all publications carry IRENA's own citation block. Reuse of retrieved content should preserve those citations.
+This server is a thin interface over publicly available renewable energy data. All statistical findings carry inline citations; all publication excerpts carry the original citation block. Reuse of retrieved content should preserve those citations.
