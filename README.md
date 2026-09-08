@@ -12,7 +12,7 @@ Sparkscout MCP bridges modern AI systems with trusted energy knowledge.
 
 Rather than relying solely on model memory, AI agents can access curated publications and structured datasets to answer questions using verifiable evidence. This allows analysts, policymakers, researchers, developers, and decision-makers to generate insights that are transparent, reproducible, and grounded in authoritative sources.
 
-Through a single MCP integration, Sparkscout provides access to:
+Through a single MCP integration, Sparkscout provides access to information available to the *public*, such as:
 
 ✅ Attributed official publications and technical reports from a reputable IGO.
 
@@ -337,7 +337,7 @@ The true value of Sparkscout lies in combining evidence retrieval and statistica
 
 ---
 
-## 🏛️ Ministerial & COP Briefings
+## 🏛️ Ministerial Briefings
 
 > Prepare a briefing for energy ministers on power sector transformation, highlighting renewable deployment trends, investment flows, and recommendations from recent flagship publications.
 
