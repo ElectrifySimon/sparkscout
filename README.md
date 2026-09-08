@@ -16,6 +16,24 @@ Renewable energy data for AI assistants, with the source attached.
 
 ---
 
+## In plain language
+
+SparkScout is a question-answering service for renewable energy. You ask it a question about solar power, wind power, hydro, heat, electricity generation, public investment in clean energy, or one of the major country or regional reports from IRENA, the International Renewable Energy Agency, and it gives you an answer drawn from IRENA's published data and reports. Every figure it returns is tagged with the IRENA publication or dataset the figure came from, so you can verify it against the source.
+
+The service is meant for situations where the answer has to be defensible: briefings that will be reviewed, policy notes that will be cited, investment memos that will be challenged, technical answers for analysts who will pull the original up. The trade is small on your end: the answer comes with the citation, and the citation is what makes the answer usable.
+
+Examples of questions the service can answer:
+
+- What was Brazil's installed solar capacity in 2024?
+- How fast has wind power grown in West Africa over the last decade?
+- Which countries received the most public investment for renewable energy between 2010 and 2020?
+- What does the most recent IRENA renewable capacity statistics report say about capacity additions in 2024?
+- Which IRENA report covers geothermal heat generation in East Africa, and what is its main finding?
+
+The rest of this README documents the same service in technical terms: the data sources, the ingestion pipeline, the corpus coverage, the architecture, and how to run a local instance. Read on if any of that is relevant to what you need to do. If you only need the answer to a question, you do not need anything below this section; the citation comes back with the answer.
+
+---
+
 ## Why this exists
 
 Most AI assistants answer questions about renewable energy by recalling what they read during training. That works for general background and not for the kind of question where the answer has to be defensible: briefings that will be reviewed, policy notes that will be cited, investment memos that will be challenged, technical answers for analysts who can pull the source up.
