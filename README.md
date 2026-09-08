@@ -16,9 +16,9 @@ Renewable energy data for AI assistants, with the source attached.
 
 ---
 
-## 🧭 Overview
+## 🧭 Non-Technical Overview
 
-SparkScout is a question-answering service for renewable energy. You ask it a question about solar power, wind power, hydro, heat, electricity generation, public investment in clean energy, or one of the major country or regional reports from a reputable IGO, and it gives you an answer drawn from that IGO's published data and reports. Every figure it returns is tagged with the publication or dataset the figure came from, so you can verify it against the source.
+SparkScout is a question-answering service for renewable energy. You ask it a question about solar power, wind power, hydro, heat, electricity generation, public investment in renewable energy, or one of the major country or regional reports from a reputable IGO, and it gives you an attributed answer drawn from that this IGO's published data and reports. Every figure it returns is tagged with the publication or dataset the figure came from, so you can verify it against the source.
 
 The service is meant for situations where the answer has to be defensible: briefings that will be reviewed, policy notes that will be cited, investment memos that will be challenged, technical answers for analysts who will pull the original up. The trade is small on your end: the answer comes with the citation, and the citation is what makes the answer usable.
 
@@ -30,7 +30,7 @@ Examples of questions the service can answer:
 - What does the most recent renewable capacity statistics report say about capacity additions in 2024?
 - Which report covers geothermal heat generation in East Africa, and what is its main finding?
 
-The rest of this README documents the same service in technical terms: the data sources, the ingestion pipeline, the corpus coverage, the architecture, and how to run a local instance. Read on if any of that is relevant to what you need to do. If you only need the answer to a question, you do not need anything below this section; the citation comes back with the answer.
+The rest of this document explains the system in technical terms: the data sources, the ingestion pipeline, the corpus coverage, the architecture, and how to run a local instance. Read on if any of that is relevant to what you need to do. If you only need the answer to a question, you do not need anything below this section; the citation comes back with the answer.
 
 ---
 
