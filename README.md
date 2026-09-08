@@ -1,730 +1,63 @@
-# ⚡ Sparkscout MCP (Model Context Protocol)
+# SparkScout MCP
 
-> **Trusted energy intelligence for AI systems.**
->
-> Sparkscout MCP enables AI assistants & agents, and decision-support applications to access authoritative publications, structured energy statistics, and citation-ready evidence through a single Model Context Protocol (MCP) interface.
+A Model Context Protocol server that gives AI assistants and agents access to IRENA renewable energy data and publications.
 
----
+Two sources, one interface. The server exposes 11 tools over IRENA's structured statistics (DuckDB) and a corpus of IRENA reports (SQLite FTS5). Every response carries the citation needed to attribute findings back to the source dataset or publication.
 
-# 📋 What is this about ?
+![License](https://img.shields.io/badge/license-MIT%20%2B%20IRENA%20IP-blue)
+![Python](https://img.shields.io/badge/python-3.13%2B-blue)
+![MCP](https://img.shields.io/badge/MCP-FastMCP%204.0-purple)
+![Coverage](https://img.shields.io/badge/IRENA%20observations-196k-green)
 
-Sparkscout MCP bridges modern AI systems with trusted energy knowledge.
+## What it does
 
-Rather than relying solely on model memory, AI agents can access curated publications and structured datasets to answer questions using verifiable evidence. This allows analysts, policymakers, researchers, developers, and decision-makers to generate insights that are transparent, reproducible, and grounded in authoritative sources.
+An AI client connected to SparkScout can:
 
-Through a single MCP integration, Sparkscout provides access to information available to the *public*, such as:
+- Search IRENA publications by natural-language question, retrieve chapter-level excerpts, and produce formatted citations.
+- Query IRENA statistical datasets with structured filters, run grouped aggregations, sample rows, and retrieve scalar values.
+- Combine the two: take a question, find the most relevant reports, and surface the datasets that hold the quantitative answer.
 
-✅ Attributed official publications and technical reports from a reputable IGO.
+The corpus at this revision holds 56 IRENA publications and 7 statistical datasets (196,314 rows) covering power capacity, electricity generation, renewable energy shares, heat generation, and public finance flows.
 
-✅ More than 800,000 historical energy observations
-
-✅ Country, regional, and global energy statistics
-
-✅ Public finance and investment data
-
-✅ Automated citations and source attribution
-
-✅ Combined qualitative and quantitative analysis
-
-Sparkscout allows AI systems to move beyond plausible answers and toward evidence-based outputs at no cost.
-
----
-## 🔌 What Is a Model Context Protocol (MCP)?
-
-Most AI assistants are a bit like a very knowledgeable consultant who has read a great deal, but who is locked outside the organisation's information systems.
-
-They can discuss topics, explain concepts, and draft reports, but they cannot automatically access your databases, publications, knowledge repositories, or analytical tools.
-
-MCP changes that.
-
-> In simple terms, **MCP is a standard way for AI systems to securely connect to trusted sources of information and specialised tools.**
-
----
-
-### 🏛️ Why Does This Matter?
-
-Consider a common question:
-
-> "Which countries have made the fastest progress in renewable energy deployment, and what policies have contributed to that success?"
-
-Without access to trusted information sources, an AI assistant can only respond based on what it remembers from past training.
-
-With MCP, the AI can:
-
-- Look up the latest statistical data
-- Search relevant publications
-- Retrieve supporting evidence
-- Reference its sources
-- Combine information into a single analytical response
-
-Instead of relying on memory, it can work from evidence.
-
----
-
-### 📚 A Simpler Analogy
-
-Think of an AI assistant as a new analyst joining your organisation. On day one, the analyst may be intelligent and capable, but they do not yet have access to:
-
-- The document library
-- Statistical databases
-- Knowledge repositories
-- Internal tools
-
-As a result, their ability to deliver evidence-based analysis is limited. MCP is the mechanism that gives that analyst access to those resources.
-
-Once connected, they can work with the same evidence that your staff would normally consult.
-
----
-
-### ⚡ What Does Sparkscout MCP Do?
-
-Sparkscout is an MCP service focused on energy intelligence.
-
-It allows AI systems to access:
-
-📚 Official publications and technical reports
-📊 Global energy statistics
-💰 Public finance and investment data
-🌍 Country and regional indicators
-🔗 Citation-ready evidence
-
-An AI assistant can therefore move seamlessly between:
-
-> "What does the literature say?"
-
-and
-
-> "What does the data show?"
-
-without requiring users to search multiple systems manually.
-
----
-
-# 🎯 Why Sparkscout?
-
-Large language models are exceptionally good at synthesizing information.
-
-Their limitation is not analysis. Their limitation is access to trusted, verifiable evidence.
-
-Sparkscout addresses this challenge by connecting AI systems directly to curated publications and structured datasets through MCP.
-
-| Conventional AI Workflow | Sparkscout Workflow |
-|--------------------------|--------------------|
-| Relies primarily on model memory | Grounded in authoritative sources |
-| Difficult to verify statistics | Direct access to structured datasets |
-| Limited traceability | Built-in citations |
-| Publications and data exist in separate workflows | Unified analytical environment |
-| Manual evidence gathering | Retrieval and analysis through a single interface |
-
-For organisations operating in energy planning, policy development, investment analysis, research, and technical cooperation, this provides a stronger foundation for AI-assisted decision support.
-
----
-
-# 🔎 What Your AI Agent Can Access
-
-## 📚 Publications & Knowledge Retrieval
-
-Search across technical reports, policy papers, flagship publications, analytical studies, and knowledge products.
-
-Capabilities include:
-
-- Full-text BM25 retrieval
-- Section-level access
-- Chapter-level extraction
-- Report metadata exploration
-- Citation generation
-- Evidence retrieval for AI workflows
-
----
-
-## 📊 Energy Statistics & Analytical Data
-
-Access structured datasets covering:
-
-- Renewable power capacity
-- Electricity generation
-- Renewable energy shares
-- Heat generation
-- Public financial flows
-- Regional energy indicators
-
-Datasets can be queried, filtered, aggregated, and combined through natural language interactions.
-
----
-
-## 🔗 Source Attribution
-
-Responses generated through Sparkscout can preserve references to supporting evidence.
-
-Example:
-
-```text
-Germany's solar PV capacity more than doubled between 2015 and 2024.
-[data: country_capacity]
-
-Recent energy transition analyses emphasise that renewable deployment should be accompanied by investments in storage, flexibility, and grid infrastructure.
-[reports: world-energy-transition-outlook]
-```
-
-This improves transparency and allows users to trace findings back to their source.
-
----
-
-# 🚀 Getting Started
-
-Add Sparkscout MCP to your MCP-compatible client.
-
-```json
-{
-  "mcpServers": {
-    "sparkscout": {
-      "url": "https://<sparkscout-endpoint>/fastmcp", // Not yet public
-      "headers": {
-        "Authorization": "Bearer <YOUR_BEARER_TOKEN>"
-      }
-    }
-  }
-}
-```
-
-## ✅ Supported Environments
-
-- Claude Desktop
-- Cursor
-- Windsurf
-- Microsoft Copilot Studio
-- AI Gateway deployments
-- Any MCP-compatible platform
-
----
-
-# 💡 Example Questions
-
-The true value of Sparkscout lies in combining evidence retrieval and statistical analysis in a single workflow.
-
----
-
-## ⚡ Renewable Energy Deployment
-
-> How has solar PV deployment evolved in Germany since 2015, and how does this compare with recommendations on grid flexibility and storage contained in recent energy transition reports?
-
-**Combines**
-
-- Publication retrieval
-- Capacity statistics
-- Citation generation
-
-**Outputs**
-
-- Historical solar deployment trends
-- Capacity additions by year
-- Relevant policy recommendations
-- Supporting references
-
----
-
-## 🔌 Grid Planning & System Integration
-
-> Which regions have experienced the fastest growth in wind and solar capacity, and what transmission and flexibility measures are recommended to maintain system reliability?
-
-**Combines**
-
-- Regional capacity datasets
-- Publication search
-- Analytical synthesis
-
-**Outputs**
-
-- Regional growth comparisons
-- Grid infrastructure implications
-- System integration recommendations
-- Source-backed evidence
-
----
-
-## 🌍 Regional Energy Transition Assessment
-
-> Compare renewable electricity generation growth across Southeast Asia between 2010 and 2024 and identify the technologies driving the largest increases.
-
-**Combines**
-
-- Generation datasets
-- Technology-level analysis
-- Trend identification
-
-**Outputs**
-
-- Regional growth trends
-- Technology contributions
-- Country highlights
-- Supporting statistics
-
----
-
-## 💰 Investment & Finance
-
-> Which countries received the largest public financial flows for wind energy between 2020 and 2024, and how does investment compare to deployment outcomes?
-
-**Combines**
-
-- Public finance datasets
-- Capacity statistics
-- Cross-dataset analysis
-
-**Outputs**
-
-- Investment rankings
-- Deployment outcomes
-- Regional comparisons
-- Evidence-based observations
-
----
-
-## 🏝️ Energy Access
-
-> How much off-grid solar capacity has been deployed across Sub-Saharan Africa since 2018, and what lessons emerge from recent publications on energy access strategies?
-
-**Combines**
-
-- Capacity datasets
-- Regional analysis
-- Publication retrieval
-
-**Outputs**
-
-- Deployment statistics
-- Leading countries
-- Policy insights
-- Citation-ready references
-
----
-
-## ⚙️ National Energy Transition Briefing
-
-> Prepare an executive briefing on India's renewable energy transition covering capacity growth, electricity generation, renewable energy shares, and recent policy recommendations.
-
-**Combines**
-
-- Multiple datasets
-- Publication search
-- Automated summarisation
-
-**Outputs**
-
-- Executive summary
-- Statistical profile
-- Key transition trends
-- Supporting citations
-
----
-
-## 🌡️ Heat Sector Decarbonisation
-
-> Evaluate renewable heat generation trends across Europe and identify technologies showing the strongest growth over the last decade.
-
-**Combines**
-
-- Heat generation datasets
-- Trend analysis
-- Comparative assessment
-
-**Outputs**
-
-- Technology trends
-- Regional comparisons
-- Long-term growth patterns
-- Statistical evidence
-
----
-
-## 🏛️ Ministerial Briefings
-
-> Prepare a briefing for energy ministers on power sector transformation, highlighting renewable deployment trends, investment flows, and recommendations from recent flagship publications.
-
-**Combines**
-
-- Publications
-- Capacity statistics
-- Generation statistics
-- Investment data
-
-**Outputs**
-
-- Executive narrative
-- Key evidence
-- Strategic messages
-- Full source attribution
-
----
-
-# 🗄️ Available Datasets
-
-Sparkscout provides access to curated statistical datasets through a unified analytical layer.
-
-Country codes are automatically harmonised.
-
-```text
-DEU → Germany
-BRA → Brazil
-IND → India
-EGY → Egypt
-```
-
----
-
-## ⚡ Power Capacity
-
-### `country_capacity`
-
-Installed power generation capacity by country and technology.
-
-**Coverage**
-
-- 226 countries
-- 26 technologies
-- 2000–2025
-
-**Unit**
-
-- MW
-
----
-
-### `region_capacity`
-
-Installed power generation capacity by world region.
-
-**Coverage**
-
-- 10 regions
-- 13 technologies
-
-**Unit**
-
-- MW
-
----
-
-## 🔌 Electricity Generation
-
-### `country_generation`
-
-Electricity generation by country and technology.
-
-**Coverage**
-
-- 224 countries
-- 21 technologies
-- 2000–2024
-
-**Unit**
-
-- GWh
-
----
-
-### `region_generation`
-
-Electricity generation by region.
-
-**Coverage**
-
-- 10 regions
-- 12 technologies
-
-**Unit**
-
-- GWh
-
----
-
-## ♻️ Renewable Energy Indicators
-
-### `re_share`
-
-Renewable energy share of total capacity and generation.
-
-**Coverage**
-
-- 233 countries and regions
-
-**Unit**
-
-- %
-
----
-
-## 🌡️ Heat Statistics
-
-### `heat_generation`
-
-Heat generation by country and technology.
-
-**Coverage**
-
-- 52 countries
-- 13 technologies
-
-**Unit**
-
-- TJ
-
----
-
-## 💰 Public Finance
-
-### `public_investments`
-
-Public financial flows supporting energy technologies.
-
-**Coverage**
-
-- 201 countries
-
-**Unit**
-
-- USD million (constant 2022 prices)
-
----
-
-# 🛠️ MCP Tools
-
-Sparkscout exposes specialised MCP tools for knowledge retrieval, statistical analysis, and guided discovery.
-
----
-
-## 📖 Publication Tools
-
-### `sparkscout_search_reports`
-
-Search across indexed publications and return the most relevant excerpts.
-
-**Best for**
-
-- Literature reviews
-- Policy research
-- Evidence gathering
-
----
-
-### `sparkscout_get_report`
-
-Retrieve complete reports or specific sections.
-
-**Best for**
-
-- Source review
-- Chapter extraction
-- Technical analysis
-
----
-
-### `sparkscout_list_reports`
-
-Browse available publications, years, metadata, and structures.
-
----
-
-### `sparkscout_cite`
-
-Generate publication citations.
-
-Supported formats:
-
-- APA 7
-- Raw metadata
-
----
-
-## 📊 Dataset Tools
-
-### `sparkscout_query_dataset`
-
-Execute filtered analytical queries against datasets.
-
----
-
-### `sparkscout_query_dataset_aggregations`
-
-Perform grouped calculations.
-
-Supported functions:
-
-```text
-SUM
-AVG
-MIN
-MAX
-COUNT
-```
-
----
-
-### `sparkscout_get_dataset_meta`
-
-Inspect:
-
-- Columns
-- Units
-- Filters
-- Dimensions
-- Valid values
-
----
-
-### `sparkscout_get_dataset_value`
-
-Retrieve individual metrics or observations.
-
----
-
-### `sparkscout_sample_dataset`
-
-Explore representative records before querying.
-
----
-
-### `sparkscout_list_datasets`
-
-View dataset inventories, schemas, coverage periods, and metadata.
-
----
-
-## 🧠 Intelligent Question Routing
-
-### `sparkscout_answer_question`
-
-Recommended starting point for most users.
-
-The tool:
-
-1. Interprets the question
-2. Searches relevant publications
-3. Identifies candidate datasets
-4. Returns supporting evidence
-5. Suggests analytical next steps
-
-Ideal for exploratory analysis and first-pass research.
-
----
-
-# 🔄 How Sparkscout Works
-
-```text
-Policy Question
-      │
-      ▼
-Publication Discovery
-      │
-      ▼
-Evidence Retrieval
-      │
-      ▼
-Dataset Identification
-      │
-      ▼
-Statistical Analysis
-      │
-      ▼
-Source-Attributed Insight
-```
-
----
-
-# 🎯 Typical Use Cases
-
-## 🏛️ Policy Analysis
-
-Assess how deployment trends align with recommendations contained in policy and technical publications.
-
----
-
-## ⚙️ Energy Planning & Modelling
-
-Support analyses of renewable deployment, power system evolution, resource adequacy, and long-term planning.
-
----
-
-## 💵 Investment Analysis
-
-Track public financial flows, compare investment trends, and assess deployment outcomes.
-
----
-
-## 📑 Research & Technical Reporting
-
-Accelerate evidence gathering, citation management, and analytical workflows.
-
----
-
-## 🤖 AI Assistants & Knowledge Platforms
-
-Equip organisational AI assistants with trusted energy-sector knowledge and verifiable sources.
-
----
-
-## 🌐 International Cooperation
-
-Support analytical work conducted by governments, development banks, international organisations, research institutions, and technical partners.
-
----
-
-# ✅ Designed for Evidence
-
-Sparkscout is built on a simple principle:
-
-> The quality of AI-generated insight depends on the quality, transparency, and provenance of the information available to the model.
-
-By combining publication retrieval, statistical analysis, and source attribution within a single MCP interface, Sparkscout enables AI systems to produce outputs that are not only useful, but also traceable, reproducible, and grounded in evidence.
-
-For organisations working at the intersection of energy, policy, finance, technology, and international cooperation, Sparkscout provides a foundation for more trusted AI-enabled analytical workflows.
-
-
----
-
-## 🧰 Source Code
-
-This repository contains the SparkScout MCP server. The codebase is
-released under the terms of [LICENSE](./LICENSE); retrieved IRENA
-content remains governed by [NOTICE](./NOTICE).
-
-### Repository layout
+## Repository layout
 
 ```
 sparkscout/
 ├── app/
-│   ├── Dockerfile          Python 3.13-slim image, runs under uv
-│   ├── fastmcp.json        FastMCP runtime config
-│   ├── server.py           App entrypoint, table schemas, SIGHUP reload
+│   ├── Dockerfile             Python 3.13-slim, runs under uv
+│   ├── fastmcp.json           FastMCP runtime config
+│   ├── server.py              Entry point, table schemas, SIGHUP reload
 │   └── tools/
-│       ├── datasets.py     6 dataset tools over DuckDB
-│       ├── duckdb_loader.py Read-only DuckDB connection manager
-│       ├── fts5_index.py   In-memory SQLite FTS5 report index
-│       ├── fusion.py       Cross-tool hint (sparkscout_answer_question)
-│       └── reports.py      4 report tools
-├── docker-compose.yml      Local stack
-├── LICENSE                 MIT + IRENA IP carve-out
-├── NOTICE                  Third-party data attribution
-└── .gitignore              Excludes operator-only paths
+│       ├── datasets.py        6 dataset tools over DuckDB
+│       ├── duckdb_loader.py   Read-only DuckDB connection manager
+│       ├── fts5_index.py      In-memory SQLite FTS5 report index
+│       ├── fusion.py          sparkscout_answer_question
+│       └── reports.py         4 report tools
+├── docker-compose.yml         Local stack
+├── LICENSE                    MIT plus IRENA IP carve-out
+├── NOTICE                     Third-party data attribution
+└── .gitignore                 Excludes operator-only paths
 ```
 
-### Tools exposed
+## Tools
 
-| Tool | Purpose |
-|---|---|
-| `sparkscout_list_reports` | List IRENA publications in the corpus |
-| `sparkscout_get_report` | Fetch a report body or single chapter |
-| `sparkscout_search_reports` | BM25 full-text search across reports |
-| `sparkscout_cite` | Formatted citation string for a report |
-| `sparkscout_list_datasets` | List the 7 IRENA statistical datasets |
-| `sparkscout_get_dataset_meta` | Schema + sample codes for one dataset |
-| `sparkscout_query_dataset` | Filtered, parameterised query with citations |
-| `sparkscout_query_dataset_aggregations` | GROUP BY with sum/avg/count/min/max |
-| `sparkscout_get_dataset_value` | Convenience scalar lookup |
-| `sparkscout_sample_dataset` | Random sample rows |
-| `sparkscout_answer_question` | Natural-language search + dataset hints |
+| Tool | Layer | Purpose |
+|---|---|---|
+| `sparkscout_list_reports` | reports | List IRENA publications in the corpus |
+| `sparkscout_get_report` | reports | Fetch a report body or single chapter |
+| `sparkscout_search_reports` | reports | BM25 full-text search across reports |
+| `sparkscout_cite` | reports | Formatted citation string |
+| `sparkscout_list_datasets` | datasets | List the 7 IRENA statistical datasets |
+| `sparkscout_get_dataset_meta` | datasets | Schema and sample codes for one dataset |
+| `sparkscout_query_dataset` | datasets | Filtered, parameterised query with citations |
+| `sparkscout_query_dataset_aggregations` | datasets | Group-by with sum, avg, count, min, max |
+| `sparkscout_get_dataset_value` | datasets | Convenience scalar lookup |
+| `sparkscout_sample_dataset` | datasets | Random sample rows |
+| `sparkscout_answer_question` | cross | Natural-language search plus dataset hints |
 
-### Architecture at a glance
+All 11 tools return JSON. Dataset responses include an inline citation block in the form `[data: <dataset_id>, rows=N, filter=...]`.
+
+## Data path
 
 ```
               ┌────────────────────────┐
@@ -733,13 +66,12 @@ sparkscout/
                          │  HTTPS + Bearer
                          ▼
               ┌────────────────────────┐
-              │  Caddy reverse proxy   │  (operator-only, not in this repo)
-              │  TLS + token gate      │
+              │  Reverse proxy + auth  │   (operator-only, not in this repo)
               └──────────┬─────────────┘
                          │
                          ▼
               ┌────────────────────────┐
-              │  FastMCP HTTP :8000    │
+              │  FastMCP HTTP transport│
               │  11 tools, SIGHUP-reload│
               └──┬──────────────────┬──┘
                  │                  │
@@ -748,53 +80,84 @@ sparkscout/
        (read-only)                   (rebuilt on SIGHUP)
 ```
 
-### Running locally
+Two storage backends, both read-only at runtime. DuckDB serves the 7 statistical tables; the FTS5 index is rebuilt from the markdown folder on startup or on SIGHUP.
 
-Prerequisites: Python 3.13+, [uv](https://docs.astral.sh/uv/),
-DuckDB ≥1.1.3, FastMCP ≥4.0.0, a corpus of IRENA report markdowns in
-`./data/reports/`, and the IRENA DuckDB snapshot at
-`./data/irena/irena.duckdb`.
+## Quickstart
+
+Prerequisites: Python 3.13+, [uv](https://docs.astral.sh/uv/), DuckDB 1.1.3, FastMCP 4.0.0, the IRENA DuckDB snapshot at `./data/irena/irena.duckdb`, and IRENA report markdowns at `./data/reports/`.
+
+Clone, point at data, run:
 
 ```bash
-# 1. Install runtime deps via uv
-uv run --with fastmcp==4.0.0 --with duckdb==1.1.3 python app/server.py
+git clone https://github.com/ElectrifySimon/sparkscout
+cd sparkscout
 
-# 2. Configure environment
-export IRENA_REPORTS_DIR=$(pwd)/data/reports
-export IRENA_DATA_DIR=$(pwd)/data/irena
-export FASTMCP_BEARER=<your-token>          # required to enable auth
-export PYTHONUNBUFFERED=1
+# Place the IRENA DuckDB snapshot and the report markdown folder
+mkdir -p data/irena data/reports
+# cp /path/to/irena.duckdb data/irena/
+# cp /path/to/reports/*.md data/reports/
+
+# Optional: set the bearer token to enable the auth verifier
+export FASTMCP_BEARER=<your-token>
+
+# Start the server (resolves deps via uv on first run)
+uv run --with fastmcp==4.0.0 --with duckdb==1.1.3 python app/server.py
 ```
 
-The server starts on `0.0.0.0:8000`. Health probe at `GET /health`
-returns `{service, duckdb, fts5_documents, timestamp}`. Send `SIGHUP`
-to reload DuckDB and rebuild FTS5 without restarting the process.
+The server binds to `0.0.0.0:8000`. Probe health:
 
-### Wire-format and security notes
+```bash
+curl http://127.0.0.1:8000/health
+# {"service":"sparkscout","duckdb":"ok","fts5_documents":56,"timestamp":"..."}
+```
 
-- All SQL is built with parameter binding; dataset IDs and column names
-  are whitelisted against the in-process `TABLE_SCHEMAS` map before any
-  query is constructed.
-- The bearer token is read from `FASTMCP_BEARER` at startup; if unset,
-  the FastMCP app starts without the auth verifier (the proxy layer is
-  expected to enforce the gate). The Dockerfile does not bake in any
-  secret.
-- IRENA statistics are returned with an inline citation block
-  (`[data: <dataset_id>, rows=N, filter=...]`) so downstream users can
-  attribute at the row level.
+To register with an MCP client, point the client at the running endpoint and pass the bearer token. The MCP client config is not yet published: deployment information will be added when public access is opened.
 
-### Known issues (current state)
+## Datasets
 
-- `sparkscout_search_reports` still uses a phrase-quoted FTS5 query;
-  natural-language questions work better through
-  `sparkscout_answer_question`, which tokenises the question, drops
-  stopwords, and OR-merges per-term BM25 hits. Tracked for follow-up.
-- The container-level healthcheck can show `unhealthy` while the
-  application `/health` endpoint returns `200`. The two are unrelated;
-  inspect `docker inspect sparkscout` for the cause before treating
-  container health as authoritative.
+Live coverage pulled from DuckDB on this revision:
 
-### License
+| Dataset | Rows | Years | Units | Dimensions |
+|---|---|---|---|---|
+| `country_capacity` | 73,432 | 2000-2025 | MW | country, technology, grid connection, year |
+| `country_generation` | 87,256 | 2000-2024 | GWh | country, technology, data type, grid connection, year |
+| `region_capacity` | 4,399 | 2000-2025 | MW | region, technology, grid connection, year |
+| `region_generation` | 2,615 | 2000-2024 | GWh | region, technology, data type, year |
+| `re_share` | 10,826 | 2000-2025 | percent | region/country, indicator, year |
+| `heat_generation` | 9,708 | 2000-2024 | TJ | country, technology, grid connection, year |
+| `public_investments` | 8,078 | 2000-2024 | Million USD (2022 prices) | country, technology, year |
 
-SparkScout source code: see [LICENSE](./LICENSE).
-Retrieved IRENA content: see [NOTICE](./NOTICE).
+To refresh these counts after pulling new IRENA data, run `sparkscout_list_datasets` against the live server. Filter labels are resolved against the dimension tables: `countries`, `technologies`, `years`, `regions`, `indicators`, `data_type`, `grid_connection`. Common aliases such as `Solar PV`, `Wind`, `Hydro` resolve to the same PxWeb codes an analyst would type.
+
+## Architecture choices
+
+- SQL is built with parameter binding. Dataset identifiers and column names are whitelisted against the in-process `TABLE_SCHEMAS` map before any query is constructed; no string interpolation touches user input.
+- The FTS5 index is in-memory and rebuilt on SIGHUP. A single SIGHUP to the process refreshes both DuckDB and the report index without dropping connections.
+- The container runs with a read-only root filesystem. Writable state is confined to named tmpfs volumes for the `uv` cache.
+
+## Tests
+
+The repository ships with manual verification scripts under `references/sparkscout-debug-recipes-2026-09-07.md`. Automated tests are not yet wired. To run the existing verifiers:
+
+```bash
+# Pull the QA scripts from the live container
+docker exec sparkscout bash -c 'ls /tmp/qa_*.py /tmp/trace_*.py'
+# Run a known-good reproducer end to end
+docker exec sparkscout bash -c 'uv run --with duckdb==1.1.3 python /tmp/qa_fix_k.py'
+```
+
+The `qa_fix_*.py` scripts cover the bug fixes shipped in the initial release: technology alias resolution, plural-safe dim table lookup, and natural-language question tokenisation.
+
+## Known issues
+
+- `sparkscout_search_reports` uses a phrase-quoted FTS5 query; multi-word natural-language questions work better through `sparkscout_answer_question`, which tokenises the question, drops stopwords, and OR-merges per-term BM25 hits.
+- The container-level Docker healthcheck has been reporting `unhealthy` for an extended period while the application `/health` endpoint returns 200. The two are unrelated; inspect with `docker inspect sparkscout` before treating container health as authoritative.
+
+## License
+
+- SparkScout source code: see [LICENSE](./LICENSE). MIT with an appended clause covering intellectual property in IRENA-sourced content.
+- Retrieved IRENA content: see [NOTICE](./NOTICE). The statistics and publication text returned by this server remain subject to IRENA's own terms of use.
+
+## Acknowledgement
+
+This server is a thin interface over publicly available IRENA data. All statistical findings carry inline citations; all publications carry IRENA's own citation block. Reuse of retrieved content should preserve those citations.
