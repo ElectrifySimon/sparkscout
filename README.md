@@ -178,7 +178,7 @@ Add Sparkscout MCP to your MCP-compatible client.
 {
   "mcpServers": {
     "sparkscout": {
-      "url": "https://<your-mcp-endpoint>/fastmcp",
+      "url": "https://<sparkscout-endpoint>/fastmcp", // Not yet public
       "headers": {
         "Authorization": "Bearer <YOUR_BEARER_TOKEN>"
       }
