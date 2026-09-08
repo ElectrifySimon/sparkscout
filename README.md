@@ -70,6 +70,87 @@ The numbers below are pulled live from the DuckDB snapshot at the time of this r
 
 ---
 
+## PxWeb to DuckDB ingestion
+
+The seven statistical datasets are sourced from the IRENA Statistics PxWeb API (`https://pxweb.irena.org/api/v1/en/IRENASTAT`) and persisted to a single read-only DuckDB file at `data/irena/irena.duckdb`. The ingestion script is not shipped in this repository; it lives at `/home/simon/irena-data/crawl.py` on the host that owns the DuckDB file, and is invoked manually or by cron to refresh the snapshot. The MCP server reads the DuckDB file as-is and never executes the crawler.
+
+### Pipeline shape
+
+```
+  PxWeb API          PxWeb API          DuckDB file (read-only)
+  (metadata)         (chunked POST)     irena.duckdb
+       │                   │                   │
+       └──── crawl.py ─────┴──── atomic ──────►│
+            (per-table)        os.replace       └──── app/tools/datasets.py
+```
+
+The crawler performs one metadata fetch per table (declaring dimension codes, label arrays, and the measure column) followed by a sequence of chunked data POSTs. Each table is written to a fresh DuckDB connection (`irena.duckdb.tmp`); on success, the temporary file replaces the live snapshot via `os.replace`, giving an atomic swap that the running MCP server observes on the next query without an explicit reload.
+
+The MCP server's FTS5 report index is rebuilt independently, on container start or on `SIGHUP`. The DuckDB file itself is reopened lazily; no server restart is required after a successful crawl.
+
+### Schema layout
+
+For each fact table `T`, the crawler writes one main table plus one dimension table per dimension:
+
+```sql
+-- One main table per fact
+CREATE TABLE T (
+    <dim_1_code>  VARCHAR,
+    <dim_2_code>  VARCHAR,
+    ...,
+    <measure_col> DOUBLE,    -- last column of PxWeb's data response
+    source        VARCHAR    -- verbatim attribution from metadata[0].source
+);
+
+-- One dim table per dimension, code + label
+CREATE TABLE dim_T_<dim> (
+    code  VARCHAR PRIMARY KEY,
+    label VARCHAR
+);
+```
+
+Dimension table names are derived from the dimension code lowercased with `/` and space replaced by underscore (`Country/area` becomes `country_area`). The full set after a complete crawl is 7 fact tables and 27 dimension tables.
+
+### Chunking
+
+The PxWeb API rejects full-filter POSTs with HTTP 404 once the request body exceeds approximately 2 KB. The crawler works around this by chunking along the largest non-year dimension, in groups of 50 values, with the remaining dimensions requested as explicit full lists. A chunk that still 404s is halved and retried; if a single-cell query still fails, the values are fetched one at a time. Each successful POST carries an exponential backoff on HTTP 429 (rate-limited) and a 3-second retry on HTTP 5xx.
+
+This strategy is verified against all seven tables in `devops/lxc-104-self-hosted-app/references/pxweb-api-cookbook-2026-09-07.md`. The cookbook is the canonical reference for the API surface, the verified table paths, the metadata schema, and the per-table quirks (user-agent requirement, body-cap cascade, singleton dimensions, source attribution format).
+
+### Cardinality and sparsity
+
+The DuckDB holds every cell IRENA publishes and nothing else. PxWeb returns sparse JSON: cells for which IRENA has no value are absent from the response payload, not encoded as null. The crawler performs a lossless pass-through of the response, so the resulting DuckDB is sparse to the same degree as the upstream publication.
+
+| Fact table | Rows in DuckDB | Cartesian space (dim-product) | Fill rate |
+|---|---|---|---|
+| `country_capacity` | 73,432 | 305,552 (226 countries x 26 techs x 2 grids x 26 years) | 24.0% |
+| `country_generation` | 87,256 | 338,688 (224 x 21 x 1 x 3 x 24) | 25.8% |
+| `region_capacity` | 4,399 | 6,760 (10 x 13 x 2 x 26) | 65.1% |
+| `region_generation` | 2,615 | 2,880 (10 x 12 x 1 x 24) | 90.8% |
+| `re_share` | 10,826 | 12,116 (233 x 2 x 26) | 89.4% |
+| `heat_generation` | 9,708 | 32,448 (52 x 13 x 2 x 24) | 29.9% |
+| `public_investments` | 8,078 | 110,952 (201 x 23 x 24) | 7.3% |
+| **Total** | **196,314** | **809,396** | **24.2%** |
+
+The cartesian-space column is the size of the dimension cross-product, not a row count. Numbers in the older `pxweb-api-cookbook-2026-09-07.md` revisions labelled these values as "rows after crawl"; that label was incorrect and has been corrected. Maintainers extending the server, comparing snapshots, or quoting corpus sizes should use the row-count column.
+
+### Year dim encoding
+
+The PxWeb API exposes year as an index-based code (`'0'`, `'1'`, ..., `'25'`) with a parallel label array (`'2000'`, `'2001'`, ..., `'2025'`). The crawler preserves the encoding as-is: the fact-table year column contains the index string, the dim table holds both columns. Any query that needs the calendar year must join on the dim label, not the code.
+
+### Source attribution
+
+Each fact row carries a `source` column populated with the verbatim attribution string from PxWeb's `metadata[0].source` (for example, `"IRENA (2026), Renewable Capacity Statistics 2026, International Renewable Energy Agency (IRENA), Abu Dhabi"`). The MCP `DatasetResult.source` field surfaces this string to the client. The string identifies the vintage of the data; refreshing the corpus overwrites the column with the new vintage's attribution.
+
+### Operational notes for maintainers
+
+- **Re-running the crawler is idempotent on the file but not on the host filesystem.** Each run replaces `irena.duckdb` atomically via `os.replace` and writes a `manifest.json` summarising per-table row counts and the pull timestamp. Inspect the manifest after a run to confirm that all seven tables refreshed successfully.
+- **Adding a new PxWeb table** requires editing the `TABLES` tuple list in `crawl.py` with the dataset name, the PxWeb path, the chunk dimension code, and the chunk size. No DuckDB schema work is required: the crawler builds the table and its dim tables dynamically from the API metadata.
+- **The MCP server is read-only against the DuckDB file.** It opens the file with `read_only=True` and never writes. A concurrent crawl that swaps the file via `os.replace` is safe; the running server holds an open file descriptor to the old inode until its next query, which then transparently opens the new file.
+- **Cross-checking the corpus.** The verification trace at `devops/sparkscout-mcp/references/sparkscout-pxweb-duckdb-full-document-verification-2026-09-08.md` documents the row counts, dim cardinalities, and cartesian-space calculations shown above. That reference is the single source of truth for corpus density; the table in this README is a snapshot at the time of writing.
+
+---
+
 ## Repository layout
 
 ```
