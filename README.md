@@ -34,6 +34,12 @@ The rest of this document explains the system in technical terms: the data sourc
 
 ---
 
+## ▶️ How to use it
+
+If you are talking to an AI assistant, you do not interact with SparkScout directly. You ask your assistant a question about renewable energy, the assistant calls SparkScout on your behalf, and the answer comes back with a citation you can verify against the source. To see this in practice, ask your assistant: *What was Brazil's installed solar capacity in 2024?* or *Which countries received the most public investment for renewable energy between 2010 and 2020?* The first question pulls a number from a statistical dataset; the second returns a country ranking with a link to the underlying publication. The citation is what makes the answer usable: it is the part that lets the next person check the work. If your assistant has not been configured to know about this server, see the *Quickstart* section below for the operator-side setup, or pass this README to the assistant and ask it to walk you through the configuration.
+
+If you are wiring SparkScout into a client, the service speaks MCP over HTTP and answers at the `/sparkscout` endpoint with a bearer token in the `Authorization` header. Three paths reach the same server: a tailnet-only address served over Tailscale, a public address served over Tailscale Funnel with the same bearer, and a local-direct address for the host running the container. The server's eleven tools, the supported query shapes, the corpus it answers from, and the bearer-token rotation procedure are documented in the sections that follow; the *Quickstart* section gets a working local instance running in five commands, and the *Data path* section explains the three URL paths a client config can target.
+
 ## 🎯 Why this exists
 
 Most AI assistants answer questions about renewable energy by recalling what they read during training. That works for general background and not for the kind of question where the answer has to be defensible: briefings that will be reviewed, policy notes that will be cited, investment memos that will be challenged, technical answers for analysts who can pull the source up.
