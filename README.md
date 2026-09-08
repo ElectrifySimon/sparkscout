@@ -72,7 +72,7 @@ The numbers below are pulled live from the DuckDB snapshot at the time of this r
 
 ## PxWeb to DuckDB ingestion
 
-The seven statistical datasets are sourced from the IRENA Statistics PxWeb API (`https://pxweb.irena.org/api/v1/en/IRENASTAT`) and persisted to a single read-only DuckDB file at `data/irena/irena.duckdb`. The ingestion script is not shipped in this repository; it lives at `/home/simon/irena-data/crawl.py` on the host that owns the DuckDB file, and is invoked manually or by cron to refresh the snapshot. The MCP server reads the DuckDB file as-is and never executes the crawler.
+The seven statistical datasets are sourced from the IRENA Statistics PxWeb API (`https://pxweb.irena.org/api/v1/en/IRENASTAT`) and persisted to a single read-only DuckDB file at `data/irena/irena.duckdb`. The ingestion script is not part of this repository; it runs out of band on the operator's host and is invoked manually or by cron to refresh the snapshot. The MCP server reads the DuckDB file as-is and never executes the crawler.
 
 ### Pipeline shape
 
@@ -80,8 +80,8 @@ The seven statistical datasets are sourced from the IRENA Statistics PxWeb API (
   PxWeb API          PxWeb API          DuckDB file (read-only)
   (metadata)         (chunked POST)     irena.duckdb
        │                   │                   │
-       └──── crawl.py ─────┴──── atomic ──────►│
-            (per-table)        os.replace       └──── app/tools/datasets.py
+       └─ operator's ──────┴──── atomic ──────►│
+            crawler          os.replace       └─► app/tools/datasets.py
 ```
 
 The crawler performs one metadata fetch per table (declaring dimension codes, label arrays, and the measure column) followed by a sequence of chunked data POSTs. Each table is written to a fresh DuckDB connection (`irena.duckdb.tmp`); on success, the temporary file replaces the live snapshot via `os.replace`, giving an atomic swap that the running MCP server observes on the next query without an explicit reload.
@@ -115,7 +115,7 @@ Dimension table names are derived from the dimension code lowercased with `/` an
 
 The PxWeb API rejects full-filter POSTs with HTTP 404 once the request body exceeds approximately 2 KB. The crawler works around this by chunking along the largest non-year dimension, in groups of 50 values, with the remaining dimensions requested as explicit full lists. A chunk that still 404s is halved and retried; if a single-cell query still fails, the values are fetched one at a time. Each successful POST carries an exponential backoff on HTTP 429 (rate-limited) and a 3-second retry on HTTP 5xx.
 
-This strategy is verified against all seven tables in `devops/lxc-104-self-hosted-app/references/pxweb-api-cookbook-2026-09-07.md`. The cookbook is the canonical reference for the API surface, the verified table paths, the metadata schema, and the per-table quirks (user-agent requirement, body-cap cascade, singleton dimensions, source attribution format).
+This strategy is verified against all seven tables. The operator maintains a separate cookbook reference documenting the API surface, the verified table paths, the metadata schema, and the per-table quirks (user-agent requirement, body-cap cascade, singleton dimensions, source attribution format).
 
 ### Cardinality and sparsity
 
@@ -145,9 +145,97 @@ Each fact row carries a `source` column populated with the verbatim attribution 
 ### Operational notes for maintainers
 
 - **Re-running the crawler is idempotent on the file but not on the host filesystem.** Each run replaces `irena.duckdb` atomically via `os.replace` and writes a `manifest.json` summarising per-table row counts and the pull timestamp. Inspect the manifest after a run to confirm that all seven tables refreshed successfully.
-- **Adding a new PxWeb table** requires editing the `TABLES` tuple list in `crawl.py` with the dataset name, the PxWeb path, the chunk dimension code, and the chunk size. No DuckDB schema work is required: the crawler builds the table and its dim tables dynamically from the API metadata.
+- **Adding a new PxWeb table** requires editing the operator's crawler configuration with the dataset name, the PxWeb path, the chunk dimension code, and the chunk size. No DuckDB schema work is required: the crawler builds the table and its dim tables dynamically from the API metadata.
 - **The MCP server is read-only against the DuckDB file.** It opens the file with `read_only=True` and never writes. A concurrent crawl that swaps the file via `os.replace` is safe; the running server holds an open file descriptor to the old inode until its next query, which then transparently opens the new file.
-- **Cross-checking the corpus.** The verification trace at `devops/sparkscout-mcp/references/sparkscout-pxweb-duckdb-full-document-verification-2026-09-08.md` documents the row counts, dim cardinalities, and cartesian-space calculations shown above. That reference is the single source of truth for corpus density; the table in this README is a snapshot at the time of writing.
+- **Cross-checking the corpus.** The fill rates and cartesian-space denominators in the table above are derived from the live DuckDB snapshot; they are reproducible by counting rows in each fact table and multiplying the cardinalities of its dimension tables.
+
+---
+
+## Markdown report ingestion
+
+The publication half of the corpus is a flat directory of Markdown files at `data/reports/`. Each file is one IRENA publication: front matter, body, figures described in text. The MCP server treats the directory as the source of truth and rebuilds an in-memory full-text index from it on every container start and on `SIGHUP`. No external database is involved for the report half; the index lives in SQLite's FTS5 engine, scoped to the process lifetime, and is rebuilt from disk on each refresh rather than incrementally updated.
+
+### Why Markdown and not PDF
+
+The corpus is served to the model as text, not as binary. PDFs are difficult for retrieval-grade models to consume directly: scanned pages, multi-column layouts, embedded figure captions, and the absence of structural cues all degrade the signal that a BM25 retriever or a downstream LLM can act on. The convention here is that every publication is converted to Markdown before it lands in `data/reports/`. Markdown preserves the document's heading hierarchy, table structure, and inline emphasis as plain text that the indexer can tokenise; it discards the visual layout, which is irrelevant to retrieval.
+
+### Schema
+
+The FTS5 virtual table is built once per refresh:
+
+```sql
+CREATE VIRTUAL TABLE reports_fts USING fts5(
+    report_id UNINDEXED,
+    content,
+    tokenize = 'porter unicode61'
+);
+```
+
+`report_id` is the filename without the `.md` extension, used as a stable lookup key across the four report tools and the dataset fusion layer. `content` is the entire file body as a single string. The tokeniser is the FTS5 built-in `porter unicode61`, which combines Porter stemming with Unicode-aware case folding. No custom tokeniser, no stopword list, no synonyms table.
+
+In parallel, the builder walks the same directory once and extracts a small metadata record per file, held in a process-local dict keyed by `report_id`:
+
+| Field | Source |
+|---|---|
+| `title` | First `# H1` heading in the file, falling back to the first non-empty line if no H1 is present |
+| `year` | First `© IRENA YYYY` substring |
+| `isbn` | First `ISBN: …` line |
+| `citation` | First `Citation: …` line |
+| `file_path` | Absolute path to the `.md` file, for chapter retrieval and debug |
+
+The metadata record is not stored in FTS5; it is recomputed on every refresh and held in memory. FTS5 carries only the searchable content. The four report tools (`sparkscout_list_reports`, `sparkscout_get_report`, `sparkscout_search_reports`, `sparkscout_cite`) read the in-memory metadata dict and the FTS5 table in lockstep.
+
+### What the indexer expects from each file
+
+A file in `data/reports/` is consumable if and only if it satisfies three conditions:
+
+1. It is valid UTF-8 (or reads cleanly with the `errors="replace"` fallback).
+2. Its filename ends in `.md`.
+3. It contains at least one heading or one non-empty line, so the metadata extractor has something to anchor on.
+
+There is no YAML frontmatter requirement, no mandatory schema tag, and no minimum length. Files that fail to parse are logged at WARN level and skipped; the build proceeds over the remaining files. A corpus that is partially missing or partially malformed degrades gracefully rather than aborting the refresh.
+
+The four metadata patterns (H1, copyright year, ISBN, citation) are conventional, not enforced. Files that lack a `© IRENA YYYY` substring return `year: null` from `sparkscout_list_reports` and are silently excluded from year-filtered listings. Files that lack a `Citation:` line fall back to a synthesised APA citation in `sparkscout_cite` (style `"apa"`).
+
+### How chapter retrieval works
+
+`sparkscout_get_report` accepts an optional `chapter` argument. The implementation resolves this by scanning the file body for an H2 heading that case-insensitively matches the requested chapter title, and returning everything from that heading to the next H2 or end of file:
+
+```python
+pattern = re.compile(
+    r"^##\s+{title}.*?(?=^##\s|\Z)".format(title=re.escape(chapter)),
+    re.MULTILINE | re.DOTALL | re.IGNORECASE,
+)
+```
+
+The regex anchors on H2 only. H3 and deeper are not chapter boundaries; they belong to the enclosing H2 chapter. A chapter argument that does not match any H2 in the file returns the full body, same as if no chapter was supplied.
+
+The body is truncated at `max_chars` (default 50,000) with a `[truncated, full report is N chars]` marker appended. The full size is reported in `total_chars` so a downstream client can decide whether to re-fetch with a higher cap.
+
+### Search behaviour
+
+`sparkscout_search_reports` runs a BM25-ranked MATCH against the FTS5 table. The query is escaped to FTS5 MATCH syntax by wrapping multi-word queries in double quotes (a deliberate trade-off: phrase queries are precise on the literal text but brittle on natural-language rephrasings). The top-k hits (default 5, capped at 20) carry a 12-token snippet with `[` `]` as token delimiters and a BM25 score.
+
+For natural-language questions, the fusion tool `sparkscout_answer_question` does not use `sparkscout_search_reports` directly; it tokenises the question, drops a small built-in English stopword set, OR-merges the remaining tokens against the FTS5 index, and de-duplicates hits by `report_id`. This produces broader recall at the cost of precision, which is the correct trade-off for open-ended questions.
+
+### Refresh lifecycle
+
+The FTS5 index is in-memory and rebuilt on:
+
+- container start (initial `build()` call from the server entry point);
+- `SIGHUP` (a process-level signal that the server handles by calling `build()` again).
+
+The build is synchronous and walks the entire `data/reports/` directory; refresh time scales linearly with corpus size. There is no incremental update, no change detection, and no dirty-tracking. Adding, removing, or editing a Markdown file in `data/reports/` has no effect on the running server until the next SIGHUP (or a container restart).
+
+The DuckDB half of the corpus is unaffected by the report refresh; the two backends are independent. SIGHUP refreshes only FTS5; the DuckDB file is read-only from the server's perspective and is replaced out-of-band by the operator's crawler.
+
+### Operational notes for maintainers
+
+- **Markdown is the contract.** A file in `data/reports/` is treated as the authoritative text for that publication. If the upstream PDF has figures, tables, or section structures that the Markdown does not preserve, the model's retrieval and citation will reflect only what the Markdown contains. The conversion step from PDF to Markdown is upstream of this repository; this server does not perform it.
+- **Title and year are heuristics.** The extractor relies on patterns (`# H1`, `© IRENA YYYY`). If a publication's Markdown does not follow these patterns, the metadata fields will be empty and the corpus will be harder to navigate. Run `sparkscout_list_reports` after a refresh and check for empty titles or `null` years as a quick health probe.
+- **A partial corpus refresh is acceptable.** Files that fail to parse are logged and skipped. A refresh that goes from 56 to 53 indexed reports without operator intervention indicates three files have rotted or changed format; investigate before assuming the corpus is fully refreshed.
+- **The tokeniser is the FTS5 built-in `porter unicode61`.** No custom dictionaries, no language detection, no synonym expansion. Reports in languages other than English will tokenise, but retrieval precision will degrade as the Porter stemmer and Unicode-61 case folding are tuned for English. Multilingual coverage is a known gap; the current corpus is English-only.
+- **SIGHUP is cheap; restart is cheap.** Either resets the index. Prefer SIGHUP during normal operations to keep container logs and metric series continuous; prefer a full restart when also changing server configuration or after a container image upgrade.
 
 ---
 
