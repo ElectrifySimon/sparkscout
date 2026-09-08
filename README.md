@@ -2,11 +2,25 @@
 ![Python](https://img.shields.io/badge/python-3.13%2B-blue)
 ![MCP](https://img.shields.io/badge/MCP-FastMCP%204.0-purple)
 ![Datasets](https://img.shields.io/badge/datasets-7-green)
-![Observations](https://img.shields.io/badge/observations-196k-green)
+![Observations](https://img.shields.io/badge/IRENA%20observations-196k-green)
+![Status](https://img.shields.io/badge/status-pre--release-orange)
 
 # SparkScout MCP
 
 A Model Context Protocol server that gives AI assistants and agents clean access to authoritative renewable energy data.
+
+> [!IMPORTANT]
+> **Project status: pre-release, single-operator deployment.** This repository contains the source code and the public documentation; the live MCP endpoint is not yet open for general registration. If you want to run the server yourself, the Quickstart below gets you a working instance in five commands. The status callout further down this README sets out what the corpus covers today, what is not yet covered, and what to expect from the next refresh.
+>
+> The seven statistical datasets and the publication corpus are governed by the upstream publisher's terms of use; see `NOTICE` for the attribution and reuse rules.
+
+---
+
+## Why this exists
+
+Most AI assistants answer questions about renewable energy by recalling what they read during training. That is fine for general background, and not fine for the kind of question where the answer has to be defensible: briefings that will be reviewed, policy notes that will be cited, investment memos that will be challenged, technical answers for analysts who can pull the source up.
+
+SparkScout closes that gap by giving the assistant a thin interface to a curated corpus: published reports from a reputable international organisation, and a set of structured statistical tables with country, technology, year, and investment dimensions. Every response carries the citation needed to trace the answer back to the source. The trade is small: the assistant has to call a tool, and the corpus has to be refreshed periodically from upstream.
 
 ---
 
@@ -33,6 +47,46 @@ An AI client connected to SparkScout can:
 - Combine the two: take a question, find the most relevant publications, and surface the datasets that hold the quantitative answer.
 
 The corpus at this revision holds 56 publications and 7 statistical datasets (196,314 rows) covering power capacity, electricity generation, renewable energy shares, heat generation, and public finance flows.
+
+---
+
+## Status of the corpus
+
+The numbers and corpus size below are pulled live from the DuckDB snapshot at the time of this revision (2026-09-08). Run `sparkscout_list_datasets` against the running server to refresh after pulling a new snapshot.
+
+### Statistical datasets
+
+| Dataset | Rows | Year range | Units | Dimensions |
+|---|---|---|---|---|
+| `country_capacity` | 73,432 | 2000-2025 | MW | country, technology, grid connection, year |
+| `country_generation` | 87,256 | 2000-2024 | GWh | country, technology, data type, grid connection, year |
+| `region_capacity` | 4,399 | 2000-2025 | MW | region, technology, grid connection, year |
+| `region_generation` | 2,615 | 2000-2024 | GWh | region, technology, data type, year |
+| `re_share` | 10,826 | 2000-2025 | percent | region/country, indicator, year |
+| `heat_generation` | 9,708 | 2000-2024 | TJ | country, technology, grid connection, year |
+| `public_investments` | 8,078 | 2001-2023 | Million USD (2022 prices) | country, technology, year |
+
+### Publications
+
+56 markdown reports currently indexed. The corpus covers energy transition outlooks, technology briefings (solar, wind, hydrogen, storage), regional analyses, and policy briefs. Year, ISBN, and citation are extracted from each report's frontmatter.
+
+### What is covered today
+
+- Installed power generation capacity and electricity generation by country and technology.
+- Renewable share of capacity and generation.
+- Heat generation by country and technology.
+- Public financial flows for renewable energy by recipient country and technology.
+- Full-text search across the indexed publication corpus, with chapter-level retrieval and citation.
+
+### What is not covered yet
+
+- **Cost data** (LCOE, capex, opex, levelised cost of storage). The upstream source publishes these as separate datasets; they are not in the current DuckDB snapshot.
+- **Project-level data** (individual power plants, project pipelines, financial deals). The current datasets are aggregate country and region views.
+- **Sub-annual granularity**. All datasets report on an annual basis; quarterly and monthly series are not in scope.
+- **Non-energy mitigation topics** (land use, water use, emissions factors). These live outside the energy statistics series.
+- **Live network access**. The MCP endpoint is not yet registered publicly; the Quickstart runs the server locally.
+
+---
 
 ## Repository layout
 
@@ -101,48 +155,24 @@ Two storage backends, both read-only at runtime. DuckDB serves the 7 statistical
 
 Prerequisites: Python 3.13+, [uv](https://docs.astral.sh/uv/), DuckDB 1.1.3, FastMCP 4.0.0, the upstream DuckDB snapshot at `./data/irena/irena.duckdb`, and the report markdowns at `./data/reports/`.
 
-Clone, point at data, run:
-
 ```bash
 git clone https://github.com/ElectrifySimon/sparkscout
 cd sparkscout
 
-# Place the DuckDB snapshot and the report markdown folder
 mkdir -p data/irena data/reports
 # cp /path/to/irena.duckdb data/irena/
 # cp /path/to/reports/*.md data/reports/
 
-# Optional: set the bearer token to enable the auth verifier
-export FASTMCP_BEARER=<your-token>
+export FASTMCP_BEARER=<your-token>   # optional: enable the auth verifier
 
-# Start the server (resolves deps via uv on first run)
 uv run --with fastmcp==4.0.0 --with duckdb==1.1.3 python app/server.py
-```
 
-The server binds to `0.0.0.0:8000`. Probe health:
-
-```bash
+# In a second terminal, probe health:
 curl http://127.0.0.1:8000/health
 # {"service":"sparkscout","duckdb":"ok","fts5_documents":56,"timestamp":"..."}
 ```
 
-To register with an MCP client, point the client at the running endpoint and pass the bearer token. The MCP client config is not yet published: deployment information will be added when public access is opened.
-
-## Datasets
-
-Live coverage pulled from DuckDB on this revision:
-
-| Dataset | Rows | Years | Units | Dimensions |
-|---|---|---|---|---|
-| `country_capacity` | 73,432 | 2000-2025 | MW | country, technology, grid connection, year |
-| `country_generation` | 87,256 | 2000-2024 | GWh | country, technology, data type, grid connection, year |
-| `region_capacity` | 4,399 | 2000-2025 | MW | region, technology, grid connection, year |
-| `region_generation` | 2,615 | 2000-2024 | GWh | region, technology, data type, year |
-| `re_share` | 10,826 | 2000-2025 | percent | region/country, indicator, year |
-| `heat_generation` | 9,708 | 2000-2024 | TJ | country, technology, grid connection, year |
-| `public_investments` | 8,078 | 2001-2023 | Million USD (2022 prices) | country, technology, year |
-
-To refresh these counts after pulling a new snapshot, run `sparkscout_list_datasets` against the live server. Filter labels are resolved against the dimension tables: `countries`, `technologies`, `years`, `regions`, `indicators`, `data_type`, `grid_connection`. Common aliases such as `Solar PV`, `Wind`, `Hydro` resolve to the same codes an analyst would type.
+The server binds to `0.0.0.0:8000`. The MCP client config for a live hosted endpoint is not yet published; deployment information will be added when public access is opened.
 
 ## Architecture choices
 
@@ -155,9 +185,7 @@ To refresh these counts after pulling a new snapshot, run `sparkscout_list_datas
 The repository ships with manual verification scripts under `references/sparkscout-debug-recipes-2026-09-07.md`. Automated tests are not yet wired. To run the existing verifiers:
 
 ```bash
-# Pull the QA scripts from the live container
 docker exec sparkscout bash -c 'ls /tmp/qa_*.py /tmp/trace_*.py'
-# Run a known-good reproducer end to end
 docker exec sparkscout bash -c 'uv run --with duckdb==1.1.3 python /tmp/qa_fix_k.py'
 ```
 
@@ -166,7 +194,6 @@ The `qa_fix_*.py` scripts cover the bug fixes shipped in the initial release: te
 ## Known issues
 
 - `sparkscout_search_reports` uses a phrase-quoted FTS5 query; multi-word natural-language questions work better through `sparkscout_answer_question`, which tokenises the question, drops stopwords, and OR-merges per-term BM25 hits.
-- The container-level Docker healthcheck has been reporting `unhealthy` for an extended period while the application `/health` endpoint returns 200. The two are unrelated; inspect with `docker inspect sparkscout` before treating container health as authoritative.
 
 ## License
 
