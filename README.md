@@ -678,3 +678,123 @@ Sparkscout is built on a simple principle:
 By combining publication retrieval, statistical analysis, and source attribution within a single MCP interface, Sparkscout enables AI systems to produce outputs that are not only useful, but also traceable, reproducible, and grounded in evidence.
 
 For organisations working at the intersection of energy, policy, finance, technology, and international cooperation, Sparkscout provides a foundation for more trusted AI-enabled analytical workflows.
+
+
+---
+
+## 🧰 Source Code
+
+This repository contains the SparkScout MCP server. The codebase is
+released under the terms of [LICENSE](./LICENSE); retrieved IRENA
+content remains governed by [NOTICE](./NOTICE).
+
+### Repository layout
+
+```
+sparkscout/
+├── app/
+│   ├── Dockerfile          Python 3.13-slim image, runs under uv
+│   ├── fastmcp.json        FastMCP runtime config
+│   ├── server.py           App entrypoint, table schemas, SIGHUP reload
+│   └── tools/
+│       ├── datasets.py     6 dataset tools over DuckDB
+│       ├── duckdb_loader.py Read-only DuckDB connection manager
+│       ├── fts5_index.py   In-memory SQLite FTS5 report index
+│       ├── fusion.py       Cross-tool hint (sparkscout_answer_question)
+│       └── reports.py      4 report tools
+├── docker-compose.yml      Local stack
+├── LICENSE                 MIT + IRENA IP carve-out
+├── NOTICE                  Third-party data attribution
+└── .gitignore              Excludes operator-only paths
+```
+
+### Tools exposed
+
+| Tool | Purpose |
+|---|---|
+| `sparkscout_list_reports` | List IRENA publications in the corpus |
+| `sparkscout_get_report` | Fetch a report body or single chapter |
+| `sparkscout_search_reports` | BM25 full-text search across reports |
+| `sparkscout_cite` | Formatted citation string for a report |
+| `sparkscout_list_datasets` | List the 7 IRENA statistical datasets |
+| `sparkscout_get_dataset_meta` | Schema + sample codes for one dataset |
+| `sparkscout_query_dataset` | Filtered, parameterised query with citations |
+| `sparkscout_query_dataset_aggregations` | GROUP BY with sum/avg/count/min/max |
+| `sparkscout_get_dataset_value` | Convenience scalar lookup |
+| `sparkscout_sample_dataset` | Random sample rows |
+| `sparkscout_answer_question` | Natural-language search + dataset hints |
+
+### Architecture at a glance
+
+```
+              ┌────────────────────────┐
+              │  MCP client (any host) │
+              └──────────┬─────────────┘
+                         │  HTTPS + Bearer
+                         ▼
+              ┌────────────────────────┐
+              │  Caddy reverse proxy   │  (operator-only, not in this repo)
+              │  TLS + token gate      │
+              └──────────┬─────────────┘
+                         │
+                         ▼
+              ┌────────────────────────┐
+              │  FastMCP HTTP :8000    │
+              │  11 tools, SIGHUP-reload│
+              └──┬──────────────────┬──┘
+                 │                  │
+       DuckDB ◄──┘                  └──► SQLite FTS5 (in-memory)
+       /data/irena/irena.duckdb       /data/reports/*.md
+       (read-only)                   (rebuilt on SIGHUP)
+```
+
+### Running locally
+
+Prerequisites: Python 3.13+, [uv](https://docs.astral.sh/uv/),
+DuckDB ≥1.1.3, FastMCP ≥4.0.0, a corpus of IRENA report markdowns in
+`./data/reports/`, and the IRENA DuckDB snapshot at
+`./data/irena/irena.duckdb`.
+
+```bash
+# 1. Install runtime deps via uv
+uv run --with fastmcp==4.0.0 --with duckdb==1.1.3 python app/server.py
+
+# 2. Configure environment
+export IRENA_REPORTS_DIR=$(pwd)/data/reports
+export IRENA_DATA_DIR=$(pwd)/data/irena
+export FASTMCP_BEARER=<your-token>          # required to enable auth
+export PYTHONUNBUFFERED=1
+```
+
+The server starts on `0.0.0.0:8000`. Health probe at `GET /health`
+returns `{service, duckdb, fts5_documents, timestamp}`. Send `SIGHUP`
+to reload DuckDB and rebuild FTS5 without restarting the process.
+
+### Wire-format and security notes
+
+- All SQL is built with parameter binding; dataset IDs and column names
+  are whitelisted against the in-process `TABLE_SCHEMAS` map before any
+  query is constructed.
+- The bearer token is read from `FASTMCP_BEARER` at startup; if unset,
+  the FastMCP app starts without the auth verifier (the proxy layer is
+  expected to enforce the gate). The Dockerfile does not bake in any
+  secret.
+- IRENA statistics are returned with an inline citation block
+  (`[data: <dataset_id>, rows=N, filter=...]`) so downstream users can
+  attribute at the row level.
+
+### Known issues (current state)
+
+- `sparkscout_search_reports` still uses a phrase-quoted FTS5 query;
+  natural-language questions work better through
+  `sparkscout_answer_question`, which tokenises the question, drops
+  stopwords, and OR-merges per-term BM25 hits. Tracked for follow-up.
+- The container-level healthcheck can show `unhealthy` while the
+  application `/health` endpoint returns `200`. The two are unrelated;
+  inspect `docker inspect sparkscout` for the cause before treating
+  container health as authoritative.
+
+### License
+
+SparkScout source code: see [LICENSE](./LICENSE).
+Retrieved IRENA content: see [NOTICE](./NOTICE).

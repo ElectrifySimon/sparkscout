@@ -1,0 +1,25 @@
+SparkScout — third-party data and attribution notice
+=====================================================
+
+SparkScout accesses public energy data published by the International
+Renewable Energy Agency (IRENA). The data and statistical indicators
+delivered by this server are governed by IRENA's own terms of use:
+
+  - Renewable capacity and generation statistics, public finance data,
+    and cost series retrieved via the dataset tools
+    (sparkscout_list_datasets, sparkscout_query_dataset,
+     sparkscout_query_dataset_aggregations, sparkscout_get_dataset_value,
+     sparkscout_sample_dataset) are subject to IRENA's licensing and
+    attribution requirements. Every response carries a citation block
+    with the precise dataset identifier and filter context; downstream
+    users must retain that citation.
+
+  - IRENA publication text (reports, working papers, briefs) returned
+    by the report tools (sparkscout_list_reports, sparkscout_get_report,
+     sparkscout_search_reports, sparkscout_answer_question) is covered
+    by the publication's own copyright. Citation strings are produced
+    via sparkscout_cite using each report's frontmatter citation block.
+
+SparkScout itself is released under the LICENSE file in this repository.
+The two are separate: this NOTICE governs how retrieved content may be
+used, while LICENSE governs how the SparkScout source code may be used.

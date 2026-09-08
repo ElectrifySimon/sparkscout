@@ -1,0 +1,74 @@
+services:
+  sparkscout:
+    build: ./app
+    image: sparkscout:latest
+    container_name: sparkscout
+    restart: unless-stopped
+    # read_only: true -- the whole root FS is immutable. We get
+    # writability only via the explicit tmpfs + named volumes below.
+    read_only: true
+    tmpfs:
+      # size cap; uid/gid make the tmpfs owned by app so uv can write
+      # CACHEDIR.TAG and friends without EACCES.
+      - /tmp:size=64M,uid=1000,gid=1000
+      - /home/app/.cache:size=256M,uid=1000,gid=1000,exec
+    cap_drop: [NET_RAW, SYS_ADMIN]
+    security_opt: ["no-new-privileges:true"]
+    user: "1000:1000"
+    working_dir: /home/app
+    volumes:
+      - ./app/server.py:/home/app/server.py:ro
+      - ./app/fastmcp.json:/home/app/fastmcp.json:ro
+      - ./app/tools:/home/app/tools:ro
+      - ./.env:/home/app/.env:ro
+      - ${IRENA_REPORTS_DIR}:/data/reports:ro
+      - ${IRENA_DATA_DIR}:/data/irena:ro
+    environment:
+      - IRENA_REPORTS_DIR=/data/reports
+      - IRENA_DATA_DIR=/data/irena
+      - DUCKDB_PATH=/data/irena/irena.duckdb
+      - FASTMCP_BEARER=${FASTMCP_BEARER}
+      - FASTMCP_LOG_LEVEL=INFO
+      - PYTHONUNBUFFERED=1
+      - UV_CACHE_DIR=/home/app/.cache/uv
+    ports:
+      - "127.0.0.1:7100:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  sparkscout-caddy:
+    image: caddy:2-alpine
+    container_name: sparkscout-caddy
+    restart: unless-stopped
+    # No read_only here. The official caddy:2-alpine image needs root to
+    # run caddy itself (binary exec on the root FS) and writes to /data and
+    # /config at startup. We harden it via tmpfs for /tmp + cap_drop +
+    # no-new-privileges.
+    read_only: false
+    tmpfs:
+      - /tmp:size=32M
+    cap_drop: [NET_RAW, SYS_ADMIN]
+    security_opt: ["no-new-privileges:true"]
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy/site:/srv:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      - FASTMCP_BEARER=${FASTMCP_BEARER}
+    ports:
+      - "127.0.0.1:8443:8443"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:2019/config/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  caddy_data:
+  caddy_config:

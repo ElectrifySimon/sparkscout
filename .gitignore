@@ -1,0 +1,61 @@
+# Secrets and operator config
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+
+# uv
+.uv-cache/
+.python-version
+
+# Distribution / build
+build/
+dist/
+*.egg-info/
+*.egg
+.pyc
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Operator-only: reverse proxy + static landing
+caddy/Caddyfile
+caddy/site/
+
+# Operator-only: compose and runtime overrides
+docker-compose.override.yml
+docker-compose.local.yml
+
+# Test/coverage caches
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Logs
+*.log
+logs/
+
+# OS
+.Trash-*
+
+# Trace/debug scripts (keep working tree clean, never commit)
+trace_*.py
+/tmp/trace_*.py
+/tmp/qa_*.py
