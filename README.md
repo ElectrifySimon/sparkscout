@@ -83,7 +83,7 @@ The numbers below are pulled live from the DuckDB snapshot at the time of this r
 - Renewable share of capacity and generation.
 - Heat generation by country and technology.
 - Public financial flows for renewable energy by recipient country and technology.
-- Weighted-average LCOE by technology, region, country, and year. Sourced from the IRENA Renewable Power Generation Costs 2025 corpus (operator-private).
+- Weighted-average LCOE by technology, region, country, and year. Sourced from the IRENA Renewable Power Generation Costs 2025 corpus.
 - Full-text search across the indexed publication corpus, with chapter-level retrieval and citation.
 
 ### Not covered yet
@@ -92,7 +92,7 @@ The numbers below are pulled live from the DuckDB snapshot at the time of this r
 - **Sub-annual granularity**. All datasets report on an annual basis; quarterly and monthly series are not in scope.
 - **Non-energy mitigation topics** (land use, water use, emissions factors). These live outside the energy statistics series.
 - **Live network access**. The MCP endpoint is not yet registered publicly; the Quickstart runs the server locally.
-
+- **Cost corpus tables beyond `lcoe_weighted`** (TIC, CF, O&M, WACC, financing, price, cost components). These 35 fact tables exist in the `cost` DuckDB schema but are not yet registered in `TABLE_SCHEMAS`, so the dataset tools cannot reach them. Adding any one is a 10-line `TABLE_SCHEMAS` entry plus dim-table lookups for the columns it filters on.
 ---
 
 ## 💸 Cost corpus (IRENA Renewable Power Generation Costs 2025)
@@ -101,12 +101,11 @@ SparkScout ships a second DuckDB file (`irena_cost.duckdb`) holding the IRENA 20
 
 | Property | Value |
 |---|---|
-| Source | IRENA, *Renewable Power Generation Costs 2025* (operator-private build) |
+| Source | IRENA, *Renewable Power Generation Costs 2025* |
 | DB path on LXC 104 | `/home/simon/irena-data/irena_cost.duckdb` (mounted at `/data/irena/irena_cost.duckdb` inside the container) |
 | Schema name | `cost` |
 | Tables in the DB | 36 fact tables (`cost.fact_lcoe_weighted`, `cost.fact_lcoe_*`, `cost.fact_tic_*`, `cost.fact_cf_*`, `cost.fact_om_cost_*`, `cost.fact_financing_*`, `cost.fact_price_*`, `cost.fact_wacc_*`, `cost.fact_cost_component_*`) + 4 dim tables (`cost.dim_lcoe_weighted_*`) |
 | Currently exposed via MCP | **`lcoe_weighted`** only — weighted-average LCOE by technology, region, country, and year. 382 fact rows, 2024 reference. |
-| Not yet exposed | The other 35 fact tables (TIC, CF, O&M, WACC, financing, price, cost components) are in the DuckDB but not registered in `TABLE_SCHEMAS`, so they are not callable through the dataset tools. Adding one is a 10-line `TABLE_SCHEMAS` entry plus dim-table lookups for the columns it filters on. |
 | Build | `/home/simon/irena-data/build_cost_duckdb.py` (reads the v8 CSV bundle in `/home/simon/drop/out/irena_cost_review_20260909_v8/`) |
 
 Example call via FastMCP:
@@ -119,7 +118,7 @@ irena_query_dataset(
 )
 ```
 
-The cost corpus is **operator-private**: the build script, the DuckDB file, and the source xlsx live on LXC 104 only. They are not redistributed through this public repo. Each cost metric lives in its own table (separate units, separate filter dimensions) rather than being merged into one wide table — a deliberate choice to keep units and scopes unambiguous. As more tables from the IRENA report get registered in `TABLE_SCHEMAS`, they will be surfaced here the same way.
+Each cost metric lives in its own table (separate units, separate filter dimensions) rather than being merged into one wide table, a deliberate choice to keep units and scopes unambiguous. As more tables from the IRENA report get registered in `TABLE_SCHEMAS`, they will be surfaced here the same way.
 
 
 ## 🔌 PxWeb to DuckDB ingestion
