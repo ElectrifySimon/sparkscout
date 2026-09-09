@@ -48,12 +48,7 @@ def _fact_name(table_id: str, schema: str = "main") -> str:
     return chr(34) + name + chr(34)
 
 
-def _row_to_dict  if schema != "main":
-        return chr(34) + schema + chr(34) + "." + chr(34) + name + chr(34)
-    return chr(34) + name + chr(34)
-
-
-def _row_to_dictdef _row_to_dict(columns: list[str], row: tuple) -> dict:
+def _row_to_dict(columns: list[str], row: tuple) -> dict:
     return {c: v for c, v in zip(columns, row)}
 
 
@@ -156,7 +151,7 @@ def _build_query_sql(duckdb_loader, dataset_id: str, schema: dict, filters: dict
 
     schema_name = schema.get("schema_name", "main")
     quoted_cols = ", ".join([f'"{c}"' for c in columns])
-    sql = f"SELECT {quoted_cols} FROM {_fact_name(dataset_id, schema_name)}"
+    sql = "SELECT " + quoted_cols + " FROM " + _fact_name(dataset_id, schema_name)
     if where_clauses:
         sql += " WHERE " + " AND ".join(where_clauses)
 

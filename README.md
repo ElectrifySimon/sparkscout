@@ -1,7 +1,7 @@
 ![License](https://img.shields.io/badge/license-MIT%20%2B%20IP%20carve--out-blue)
 ![Python](https://img.shields.io/badge/python-3.13%2B-blue)
 ![MCP](https://img.shields.io/badge/MCP-FastMCP%204.0-purple)
-![Datasets](https://img.shields.io/badge/datasets-7-green)
+![Datasets](https://img.shields.io/badge/datasets-8-green)
 ![Observations](https://img.shields.io/badge/IRENA%20observations-196k-green)
 ![Status](https://img.shields.io/badge/status-pre--release-orange)
 
@@ -52,7 +52,7 @@ SparkScout closes that gap. It gives the assistant a thin interface to a curated
 
 The server exposes 11 MCP tools over two backends. A natural-language question can be answered end to end: search the report corpus, retrieve a chapter, surface the dataset that holds the quantitative answer, and return both with citations. The same tools also serve quick factual queries: "What is Brazil's hydro capacity?", "How fast is solar power growing in West Africa?", "Which countries received the most public investment for renewable energy between 2010 and 2020?".
 
-The corpus at this revision holds 56 publications and 7 statistical datasets (196,314 rows) covering power capacity, electricity generation, renewable energy shares, heat generation, and public finance flows.
+The corpus at this revision holds 56 publications and 8 statistical datasets (196,696 rows) covering power capacity, electricity generation, renewable energy shares, heat generation, and public finance flows.
 
 ---
 
@@ -71,6 +71,7 @@ The numbers below are pulled live from the DuckDB snapshot at the time of this r
 | `re_share` | 10,826 | 2000-2025 | percent | region/country, indicator, year |
 | `heat_generation` | 9,708 | 2000-2024 | TJ | country, technology, grid connection, year |
 | `public_investments` | 8,078 | 2001-2023 | Million USD (2022 prices) | country, technology, year |
+| `lcoe_weighted` | 382 | 2010-2024 | USD/MWh (2024 real) | region, technology, country, year |
 
 ### Publications
 
@@ -82,11 +83,11 @@ The numbers below are pulled live from the DuckDB snapshot at the time of this r
 - Renewable share of capacity and generation.
 - Heat generation by country and technology.
 - Public financial flows for renewable energy by recipient country and technology.
+- Cost-of-electricity metrics: weighted-average LCOE, total installed cost, capacity factor, O&M cost, WACC. Sourced from the IRENA Renewable Power Generation Costs 2025 corpus (operator-private).
 - Full-text search across the indexed publication corpus, with chapter-level retrieval and citation.
 
 ### Not covered yet
 
-- **Cost data** (LCOE, capex, opex, levelised cost of storage). The upstream source publishes these as separate datasets; they are not in the current DuckDB snapshot.
 - **Project-level data** (individual power plants, project pipelines, financial deals). The current datasets are aggregate country and region views.
 - **Sub-annual granularity**. All datasets report on an annual basis; quarterly and monthly series are not in scope.
 - **Non-energy mitigation topics** (land use, water use, emissions factors). These live outside the energy statistics series.
@@ -94,9 +95,35 @@ The numbers below are pulled live from the DuckDB snapshot at the time of this r
 
 ---
 
+## 💸 Cost corpus (IRENA Renewable Power Generation Costs 2025)
+
+SparkScout ships a second DuckDB file (`irena_cost.duckdb`) holding the cost-corpus extract: weighted-average LCOE, total installed cost, capacity factor, O&M cost, WACC, and supporting tables from the IRENA 2025 cost report. It is ATTACHed read-only under the schema name `cost` at server startup; queries route by `schema_name` in `TABLE_SCHEMAS`.
+
+| Property | Value |
+|---|---|
+| Source | IRENA, *Renewable Power Generation Costs 2025* (operator-private build) |
+| DB path on LXC 104 | `/home/simon/irena-data/irena_cost.duckdb` (mounted at `/data/irena/irena_cost.duckdb` inside the container) |
+| Schema name | `cost` |
+| Fact tables | 36 (`cost.fact_lcoe_weighted`, `cost.fact_lcoe_*`, `cost.fact_tic_*`, `cost.fact_cf_*`, `cost.fact_om_cost_*`, `cost.fact_financing_*`, `cost.fact_price_*`, `cost.fact_wacc_*`, `cost.fact_cost_component_*`) |
+| Dim tables | 4 (`cost.dim_lcoe_weighted_technology`, `cost.dim_lcoe_weighted_region`, `cost.dim_lcoe_weighted_country`, `cost.dim_lcoe_weighted_year`) |
+| Fact rows (weighted LCOE) | 382 (technology x region x year, 2024 reference) |
+| Build | `/home/simon/irena-data/build_cost_duckdb.py` (reads the v8 CSV bundle in `/home/simon/drop/out/irena_cost_review_20260909_v8/`) |
+
+Example call via FastMCP:
+
+```
+irena_query_dataset(
+  dataset_id="lcoe_weighted",
+  filters={"technologies": ["solar_pv"], "regions": ["World"], "years": [2024]},
+  limit=20
+)
+```
+
+The cost corpus is **operator-private**: the build script, the DuckDB file, and the source xlsx live on LXC 104 only. They are not redistributed through this public repo.
+
 ## 🔌 PxWeb to DuckDB ingestion
 
-The seven statistical datasets are sourced from the IRENA Statistics PxWeb API (`https://pxweb.irena.org/api/v1/en/IRENASTAT`) and persisted to a single read-only DuckDB file at `data/irena/irena.duckdb`. The ingestion script is not part of this repository; it runs out of band on the operator's host and is invoked manually or by cron to refresh the snapshot. The MCP server reads the DuckDB file as-is and never executes the crawler.
+The eight statistical datasets are sourced from the IRENA Statistics PxWeb API (`https://pxweb.irena.org/api/v1/en/IRENASTAT`) and persisted to a single read-only DuckDB file at `data/irena/irena.duckdb`. The ingestion script is not part of this repository; it runs out of band on the operator's host and is invoked manually or by cron to refresh the snapshot. The MCP server reads the DuckDB file as-is and never executes the crawler.
 
 ### Pipeline shape
 
@@ -291,7 +318,7 @@ sparkscout/
 | `sparkscout_get_report` | reports | Fetch a report body or single chapter |
 | `sparkscout_search_reports` | reports | BM25 full-text search across reports |
 | `sparkscout_cite` | reports | Formatted citation string |
-| `sparkscout_list_datasets` | datasets | List the 7 statistical datasets |
+| `sparkscout_list_datasets` | datasets | List the 8 statistical datasets (7 PxWeb + 1 cost corpus) |
 | `sparkscout_get_dataset_meta` | datasets | Schema and sample codes for one dataset |
 | `sparkscout_query_dataset` | datasets | Filtered, parameterised query with citations |
 | `sparkscout_query_dataset_aggregations` | datasets | Group-by with sum, avg, count, min, max |
@@ -378,32 +405,3 @@ The `qa_fix_*.py` scripts cover the bug fixes shipped in the initial release: te
 ## 🙏 Acknowledgement
 
 This server is a thin interface over publicly available renewable energy data. All statistical findings carry inline citations; all publication excerpts carry the original citation block. Reuse of retrieved content should preserve those citations.
-
-
-
-## Cost corpus (IRENA Renewable Power Generation Costs 2025)
-
-SparkScout ships a second DuckDB file (`irena_cost.duckdb`) holding the cost-corpus extract: weighted-average LCOE, total installed cost, capacity factor, O&M cost, WACC, and supporting tables from the IRENA 2025 cost report. It is ATTACHed read-only under the schema name `cost` at server startup; queries route by `schema_name` in `TABLE_SCHEMAS`.
-
-| Property | Value |
-|---|---|
-| Source | IRENA, *Renewable Power Generation Costs 2025* (operator-private build) |
-| DB path on LXC 104 | `/home/simon/irena-data/irena_cost.duckdb` (mounted at `/data/irena/irena_cost.duckdb` inside the container) |
-| Schema name | `cost` |
-| Fact tables | 36 (`cost.fact_lcoe_weighted`, `cost.fact_lcoe_*`, `cost.fact_tic_*`, `cost.fact_cf_*`, `cost.fact_om_cost_*`, `cost.fact_financing_*`, `cost.fact_price_*`, `cost.fact_wacc_*`, `cost.fact_cost_component_*`) |
-| Dim tables | 4 (`cost.dim_lcoe_weighted_technology`, `cost.dim_lcoe_weighted_region`, `cost.dim_lcoe_weighted_country`, `cost.dim_lcoe_weighted_year`) |
-| Fact rows (weighted LCOE) | 382 (technology x region x year, 2024 reference) |
-| Build | `/home/simon/irena-data/build_cost_duckdb.py` (reads the v8 CSV bundle in `/home/simon/drop/out/irena_cost_review_20260909_v8/`) |
-
-Example call via FastMCP:
-
-```
-irena_query_dataset(
-  dataset_id="lcoe_weighted",
-  filters={"technologies": ["solar_pv"], "regions": ["World"], "years": [2024]},
-  limit=20
-)
-```
-
-The cost corpus is **operator-private**: the build script, the DuckDB file, and the source xlsx live on LXC 104 only. They are not redistributed through this public repo.
-
