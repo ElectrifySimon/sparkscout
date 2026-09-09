@@ -124,7 +124,8 @@ def _resolve_filter_values(duckdb_loader, dataset_id: str, dim_col: str, values,
 
 
 def _build_query_sql(duckdb_loader, dataset_id: str, schema: dict, filters: dict | None,
-                     columns: list[str] | None, limit: int, order_by: str | None):
+                     columns: list[str] | None, limit: int, order_by: str | None,
+                     table_schemas: dict | None = None):
     """Build a parameterized SELECT. Returns (sql, params, columns)."""
     measure_col = schema["measure_column"]
     all_cols = schema["dimension_columns"] + [measure_col]
@@ -282,7 +283,7 @@ def register(mcp, duckdb_loader, table_schemas: dict):
             return {"error": f"Unknown dataset_id: {dataset_id}"}
         schema = table_schemas[dataset_id]
         err, sql, params = _build_query_sql(
-            duckdb_loader, dataset_id, schema, filters, columns, limit, order_by
+            duckdb_loader, dataset_id, schema, filters, columns, limit, order_by, table_schemas
         )
         if err:
             return err
@@ -391,7 +392,7 @@ def register(mcp, duckdb_loader, table_schemas: dict):
             return {"error": f"Unknown dataset_id: {dataset_id}"}
         schema = table_schemas[dataset_id]
         err, sql, params = _build_query_sql(
-            duckdb_loader, dataset_id, schema, filters, None, 11, None
+            duckdb_loader, dataset_id, schema, filters, None, 11, None, table_schemas
         )
         if err:
             return err

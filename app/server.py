@@ -128,7 +128,8 @@ TABLE_SCHEMAS = {
 
 
 # Init state
-duckdb_loader = DuckDBLoader(DUCKDB_PATH, cost_path=COST_DUCKDB_PATH)
+cost_path = os.environ.get("COST_DUCKDB_PATH", os.path.join(IRENA_DATA_DIR, "irena_cost.duckdb"))
+duckdb_loader = DuckDBLoader(DUCKDB_PATH, cost_path=cost_path)
 fts5_index = FTS5Index(IRENA_REPORTS_DIR)
 
 try:
