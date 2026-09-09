@@ -34,16 +34,26 @@ TECH_ALIASES = {
 
 def _dim_name(table_id: str, dim_code: str, schema: str = "main") -> str:
     """dim_{table}_{dim_code_lowercased}. PxWeb uses dim_<table>_<dim_code>."""
-    name = f"dim_{table_id}_{dim_code.lower().replace('/', '_').replace(' ', '_').replace('-', '_')}"
-    return f'"{schema}"."{name}"' if schema != "main" else f'"{name}"'
+    name = "dim_" + table_id + "_" + dim_code.lower().replace("/", "_").replace(" ", "_").replace("-", "_")
+    if schema != "main":
+        return chr(34) + schema + chr(34) + "." + chr(34) + name + chr(34)
+    return chr(34) + name + chr(34)
+
 
 def _fact_name(table_id: str, schema: str = "main") -> str:
-    """fact_{table}. Schema-qualified when schema != 'main'."""
-    name = f"fact_{table_id}"
-    return f'"{schema}"."{name}"' if schema != "main" else f'"{name}"
+    """fact_{table}. Schema-qualified when schema != main."""
+    name = "fact_" + table_id
+    if schema != "main":
+        return chr(34) + schema + chr(34) + "." + chr(34) + name + chr(34)
+    return chr(34) + name + chr(34)
 
 
-def _row_to_dict(columns: list[str], row: tuple) -> dict:
+def _row_to_dict  if schema != "main":
+        return chr(34) + schema + chr(34) + "." + chr(34) + name + chr(34)
+    return chr(34) + name + chr(34)
+
+
+def _row_to_dictdef _row_to_dict(columns: list[str], row: tuple) -> dict:
     return {c: v for c, v in zip(columns, row)}
 
 

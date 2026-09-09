@@ -380,6 +380,7 @@ The `qa_fix_*.py` scripts cover the bug fixes shipped in the initial release: te
 This server is a thin interface over publicly available renewable energy data. All statistical findings carry inline citations; all publication excerpts carry the original citation block. Reuse of retrieved content should preserve those citations.
 
 
+
 ## Cost corpus (IRENA Renewable Power Generation Costs 2025)
 
 SparkScout ships a second DuckDB file (`irena_cost.duckdb`) holding the cost-corpus extract: weighted-average LCOE, total installed cost, capacity factor, O&M cost, WACC, and supporting tables from the IRENA 2025 cost report. It is ATTACHed read-only under the schema name `cost` at server startup; queries route by `schema_name` in `TABLE_SCHEMAS`.
