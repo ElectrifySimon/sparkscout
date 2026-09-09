@@ -109,16 +109,6 @@ The remaining extracts (installed cost, capacity factor, O&M, WACC, financing, p
 
 Each metric is stored in its own table rather than collapsed into a single wide table, because units and scope conditions differ across the report (USD/MWh vs USD/kW vs %, country-level vs project-finance aggregates, weighted vs simple averages). Per-table storage preserves that fidelity.
 
-Example call:
-
-```
-irena_query_dataset(
-  dataset_id="lcoe_weighted",
-  filters={"technologies": ["solar_pv"], "regions": ["World"], "years": [2024]},
-  limit=20
-)
-```
-
 
 ## 🔌 PxWeb to DuckDB ingestion
 
