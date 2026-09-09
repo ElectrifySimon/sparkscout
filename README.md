@@ -95,20 +95,21 @@ The numbers below are pulled live from the DuckDB snapshot at the time of this r
 - **Cost corpus tables beyond `lcoe_weighted`** (TIC, CF, O&M, WACC, financing, price, cost components). These 35 fact tables exist in the `cost` DuckDB schema but are not yet registered in `TABLE_SCHEMAS`, so the dataset tools cannot reach them. Adding any one is a 10-line `TABLE_SCHEMAS` entry plus dim-table lookups for the columns it filters on.
 ---
 
-## 💸 Cost corpus (IRENA Renewable Power Generation Costs 2025)
+## 💸 Cost corpus
 
-SparkScout ships a second DuckDB file (`irena_cost.duckdb`) holding the IRENA 2025 cost report extract. It is ATTACHed read-only under the schema name `cost` at server startup, so the cost tables are queryable through the same MCP server, but only datasets explicitly registered in `TABLE_SCHEMAS` are reachable through the dataset tools.
+SparkScout exposes a curated extract of the IRENA *Renewable Power Generation Costs 2025* report alongside the IRENASTAT PxWeb datasets. The extract is loaded as a second, read-only DuckDB file attached under the schema name `cost`, so the same dataset tools can query it without a separate path.
 
-| Property | Value |
-|---|---|
-| Source | IRENA, *Renewable Power Generation Costs 2025* |
-| DB path on LXC 104 | `/home/simon/irena-data/irena_cost.duckdb` (mounted at `/data/irena/irena_cost.duckdb` inside the container) |
-| Schema name | `cost` |
-| Tables in the DB | 36 fact tables (`cost.fact_lcoe_weighted`, `cost.fact_lcoe_*`, `cost.fact_tic_*`, `cost.fact_cf_*`, `cost.fact_om_cost_*`, `cost.fact_financing_*`, `cost.fact_price_*`, `cost.fact_wacc_*`, `cost.fact_cost_component_*`) + 4 dim tables (`cost.dim_lcoe_weighted_*`) |
-| Currently exposed via MCP | **`lcoe_weighted`** only — weighted-average LCOE by technology, region, country, and year. 382 fact rows, 2024 reference. |
-| Build | `/home/simon/irena-data/build_cost_duckdb.py` (reads the v8 CSV bundle in `/home/simon/drop/out/irena_cost_review_20260909_v8/`) |
+For now, only one cost dataset is registered:
 
-Example call via FastMCP:
+| Dataset | Dimensions | Coverage |
+|---|---|---|
+| `lcoe_weighted` | region, technology, country, year | Weighted-average LCOE from the IRENA 2025 cost report |
+
+The remaining extracts (installed cost, capacity factor, O&M, WACC, financing, price components, and others) are loaded into the database but are not yet surfaced through the dataset tools. They will be registered incrementally as the schema stabilises.
+
+Each metric is stored in its own table rather than collapsed into a single wide table, because units and scope conditions differ across the report (USD/MWh vs USD/kW vs %, country-level vs project-finance aggregates, weighted vs simple averages). Per-table storage preserves that fidelity.
+
+Example call:
 
 ```
 irena_query_dataset(
@@ -117,8 +118,6 @@ irena_query_dataset(
   limit=20
 )
 ```
-
-Each cost metric lives in its own table (separate units, separate filter dimensions) rather than being merged into one wide table, a deliberate choice to keep units and scopes unambiguous. As more tables from the IRENA report get registered in `TABLE_SCHEMAS`, they will be surfaced here the same way.
 
 
 ## 🔌 PxWeb to DuckDB ingestion
