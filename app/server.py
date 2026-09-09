@@ -100,6 +100,19 @@ TABLE_SCHEMAS = {
             "Year": "years",
         },
     },
+    "lcoe_weighted": {
+        "title": "IRENA Renewable Power Generation Costs 2025 — weighted-average LCOE by technology, region, country, and year",
+        "schema_name": "cost",
+        "measure_column": "value",
+        "units": "USD/MWh (2024 real)",
+        "dimension_columns": ["region", "technology_id", "country", "year"],
+        "filter_aliases": {
+            "region": "regions",
+            "technology_id": "technologies",
+            "country": "countries",
+            "year": "years",
+        },
+    },
     "public_investments": {
         "title": "Public Investments (2022 Million USD) by country/area, technology, and year",
         "measure_column": "Public Investments (2022 Million USD)",
@@ -115,7 +128,7 @@ TABLE_SCHEMAS = {
 
 
 # Init state
-duckdb_loader = DuckDBLoader(DUCKDB_PATH)
+duckdb_loader = DuckDBLoader(DUCKDB_PATH, cost_path=COST_DUCKDB_PATH)
 fts5_index = FTS5Index(IRENA_REPORTS_DIR)
 
 try:

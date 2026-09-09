@@ -27,6 +27,7 @@ services:
       - IRENA_REPORTS_DIR=/data/reports
       - IRENA_DATA_DIR=/data/irena
       - DUCKDB_PATH=/data/irena/irena.duckdb
+      - COST_DUCKDB_PATH=/data/irena/irena_cost.duckdb
       - FASTMCP_BEARER=${FASTMCP_BEARER}
       - FASTMCP_LOG_LEVEL=INFO
       - PYTHONUNBUFFERED=1

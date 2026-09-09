@@ -378,3 +378,31 @@ The `qa_fix_*.py` scripts cover the bug fixes shipped in the initial release: te
 ## 🙏 Acknowledgement
 
 This server is a thin interface over publicly available renewable energy data. All statistical findings carry inline citations; all publication excerpts carry the original citation block. Reuse of retrieved content should preserve those citations.
+
+
+## Cost corpus (IRENA Renewable Power Generation Costs 2025)
+
+SparkScout ships a second DuckDB file (`irena_cost.duckdb`) holding the cost-corpus extract: weighted-average LCOE, total installed cost, capacity factor, O&M cost, WACC, and supporting tables from the IRENA 2025 cost report. It is ATTACHed read-only under the schema name `cost` at server startup; queries route by `schema_name` in `TABLE_SCHEMAS`.
+
+| Property | Value |
+|---|---|
+| Source | IRENA, *Renewable Power Generation Costs 2025* (operator-private build) |
+| DB path on LXC 104 | `/home/simon/irena-data/irena_cost.duckdb` (mounted at `/data/irena/irena_cost.duckdb` inside the container) |
+| Schema name | `cost` |
+| Fact tables | 36 (`cost.fact_lcoe_weighted`, `cost.fact_lcoe_*`, `cost.fact_tic_*`, `cost.fact_cf_*`, `cost.fact_om_cost_*`, `cost.fact_financing_*`, `cost.fact_price_*`, `cost.fact_wacc_*`, `cost.fact_cost_component_*`) |
+| Dim tables | 4 (`cost.dim_lcoe_weighted_technology`, `cost.dim_lcoe_weighted_region`, `cost.dim_lcoe_weighted_country`, `cost.dim_lcoe_weighted_year`) |
+| Fact rows (weighted LCOE) | 382 (technology x region x year, 2024 reference) |
+| Build | `/home/simon/irena-data/build_cost_duckdb.py` (reads the v8 CSV bundle in `/home/simon/drop/out/irena_cost_review_20260909_v8/`) |
+
+Example call via FastMCP:
+
+```
+irena_query_dataset(
+  dataset_id="lcoe_weighted",
+  filters={"technologies": ["solar_pv"], "regions": ["World"], "years": [2024]},
+  limit=20
+)
+```
+
+The cost corpus is **operator-private**: the build script, the DuckDB file, and the source xlsx live on LXC 104 only. They are not redistributed through this public repo.
+

@@ -32,16 +32,22 @@ TECH_ALIASES = {
 
 # ---- helpers (also called from server.py via tool definitions) ----
 
-def _dim_name(table_id: str, dim_code: str) -> str:
+def _dim_name(table_id: str, dim_code: str, schema: str = "main") -> str:
     """dim_{table}_{dim_code_lowercased}. PxWeb uses dim_<table>_<dim_code>."""
-    return f"dim_{table_id}_{dim_code.lower().replace('/', '_').replace(' ', '_').replace('-', '_')}"
+    name = f"dim_{table_id}_{dim_code.lower().replace('/', '_').replace(' ', '_').replace('-', '_')}"
+    return f'"{schema}"."{name}"' if schema != "main" else f'"{name}"'
+
+def _fact_name(table_id: str, schema: str = "main") -> str:
+    """fact_{table}. Schema-qualified when schema != 'main'."""
+    name = f"fact_{table_id}"
+    return f'"{schema}"."{name}"' if schema != "main" else f'"{name}"
 
 
 def _row_to_dict(columns: list[str], row: tuple) -> dict:
     return {c: v for c, v in zip(columns, row)}
 
 
-def _resolve_filter_values(duckdb_loader, dataset_id: str, dim_col: str, values) -> list:
+def _resolve_filter_values(duckdb_loader, dataset_id: str, dim_col: str, values, table_schemas: dict | None = None) -> list:
     """Resolve label strings to codes via the dim table. Falls back to raw values.
 
     Two-phase match:
@@ -52,7 +58,8 @@ def _resolve_filter_values(duckdb_loader, dataset_id: str, dim_col: str, values)
     """
     if not isinstance(values, list):
         values = [values]
-    dim_table = _dim_name(dataset_id, dim_col)
+    schema_name = (table_schemas or {}).get(dataset_id, {}).get("schema_name", "main")
+    dim_table = _dim_name(dataset_id, dim_col, schema_name)
     # Plural-safety: try the singular form if the dim table is missing.
     dim_table_singular = None
     if dim_col.endswith("s"):
@@ -132,13 +139,14 @@ def _build_query_sql(duckdb_loader, dataset_id: str, schema: dict, filters: dict
             if alias not in reverse_alias:
                 return {"error": f"Unknown filter: {alias}", "available": list(reverse_alias.keys())}, None, None
             dim_col = reverse_alias[alias]
-            codes = _resolve_filter_values(duckdb_loader, dataset_id, dim_col, values)
+            codes = _resolve_filter_values(duckdb_loader, dataset_id, dim_col, values, table_schemas)
             placeholders = ",".join(["?"] * len(codes))
             where_clauses.append(f'"{dim_col}" IN ({placeholders})')
             params.extend(codes)
 
+    schema_name = schema.get("schema_name", "main")
     quoted_cols = ", ".join([f'"{c}"' for c in columns])
-    sql = f'SELECT {quoted_cols} FROM "{dataset_id}"'
+    sql = f"SELECT {quoted_cols} FROM {_fact_name(dataset_id, schema_name)}"
     if where_clauses:
         sql += " WHERE " + " AND ".join(where_clauses)
 
