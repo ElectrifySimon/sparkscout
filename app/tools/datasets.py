@@ -32,19 +32,37 @@ TECH_ALIASES = {
 
 # ---- helpers (also called from server.py via tool definitions) ----
 
-def _dim_name(table_id: str, dim_code: str, schema: str = "main") -> str:
-    """dim_{table}_{dim_code_lowercased}. PxWeb uses dim_<table>_<dim_code>."""
+def _dim_name(table_id: str, dim_code: str, schema: str = "main", quoted: bool = True) -> str:
+    """dim_{table}_{dim_code_lowercased}. PxWeb uses dim_<table>_<dim_code>.
+    quoted=True wraps in DuckDB double-quotes (and qualifies schema when not main).
+    quoted=False returns the bare identifier for callers that wrap themselves.
+    """
     name = "dim_" + table_id + "_" + dim_code.lower().replace("/", "_").replace(" ", "_").replace("-", "_")
+    if not quoted:
+        if schema != "main":
+            return schema + "." + name
+        return name
     if schema != "main":
         return chr(34) + schema + chr(34) + "." + chr(34) + name + chr(34)
     return chr(34) + name + chr(34)
 
 
-def _fact_name(table_id: str, schema: str = "main") -> str:
-    """fact_{table}. Schema-qualified when schema != main."""
-    name = "fact_" + table_id
-    if schema != "main":
-        return chr(34) + schema + chr(34) + "." + chr(34) + name + chr(34)
+def _fact_name(dataset_id: str, schema_name: str = "main", explicit_table: str | None = None) -> str:
+    """Resolve the FROM-clause table reference.
+
+    PxWeb datasets (schema_name == "main") use the dataset_id as the table name directly
+    (e.g. "country_capacity"). Cost-corpus datasets (schema_name == "cost") use a
+    "fact_<dataset_id>" convention (e.g. "fact_lcoe_weighted"). An explicit_table
+    override is honoured if provided in the schema dict.
+    """
+    if explicit_table:
+        name = explicit_table
+    elif schema_name == "cost":
+        name = "fact_" + dataset_id
+    else:
+        name = dataset_id
+    if schema_name != "main":
+        return chr(34) + schema_name + chr(34) + "." + chr(34) + name + chr(34)
     return chr(34) + name + chr(34)
 
 
@@ -71,8 +89,10 @@ def _resolve_filter_values(duckdb_loader, dataset_id: str, dim_col: str, values,
         singular = dim_col[:-1]
         if singular:
             dim_table_singular = _dim_name(dataset_id, singular)
-    # Alias shortcut for Technology dim on any table with a Technology column.
-    if dim_col == "Technology":
+    # Alias shortcut for Technology dim — but only for PxWeb (main) schema.
+    # Cost-corpus uses literal codes like "solar_pv", "onshore_wind" which differ from
+    # PxWeb numeric codes ("2", "4"). Apply alias only when the schema is main.
+    if dim_col == "Technology" and schema_name == "main":
         aliased: list[str] = []
         for v in values:
             v_lower = str(v).lower().strip()
@@ -82,19 +102,26 @@ def _resolve_filter_values(duckdb_loader, dataset_id: str, dim_col: str, values,
         if aliased:
             return aliased
     codes: list[str] = []
-    # Probe the dim table; if missing, fall back to the singular form.
-    effective_dim_table = dim_table
+    # Build a properly-quoted, optionally schema-qualified bare table reference.
+    bare = _dim_name(dataset_id, dim_col, schema_name, quoted=False)
+    if schema_name != "main":
+        effective_dim_table = chr(34) + schema_name + chr(34) + "." + chr(34) + bare + chr(34)
+    else:
+        effective_dim_table = chr(34) + bare + chr(34)
     try:
-        duckdb_loader.execute(f'SELECT 1 FROM "{dim_table}" LIMIT 0')
+        duckdb_loader.execute("SELECT 1 FROM " + effective_dim_table + " LIMIT 0")
     except Exception:
         if dim_table_singular:
-            effective_dim_table = dim_table_singular
+            bare2 = _dim_name(dataset_id, dim_col[:-1], schema_name, quoted=False)
+            if schema_name != "main":
+                effective_dim_table = chr(34) + schema_name + chr(34) + "." + chr(34) + bare2 + chr(34)
+            else:
+                effective_dim_table = chr(34) + bare2 + chr(34)
     try:
         # Phase 1: exact (case-insensitive) label OR code match
         lowered = [str(v).lower() for v in values]
         rows = duckdb_loader.execute(
-            f'SELECT code, label FROM "{effective_dim_table}" '
-            f'WHERE LOWER(label) = ANY(?) OR LOWER(code) = ANY(?)',
+            "SELECT code, label FROM " + effective_dim_table + " WHERE LOWER(label) = ANY(?) OR LOWER(code) = ANY(?)",
             [lowered, lowered],
         ).fetchall()
         for r in rows:
@@ -108,9 +135,8 @@ def _resolve_filter_values(duckdb_loader, dataset_id: str, dim_col: str, values,
                 if any(c.lower() == v_lower for c in codes):
                     continue
             rows = duckdb_loader.execute(
-                f'SELECT code, label FROM "{effective_dim_table}" '
-                f'WHERE LOWER(label) LIKE ?',
-                [f'%{v_lower}%'],
+                "SELECT code, label FROM " + effective_dim_table + " WHERE LOWER(label) LIKE ?",
+                [f"%{v_lower}%"],
             ).fetchall()
             for r in rows:
                 if r[0] not in codes:
@@ -151,8 +177,9 @@ def _build_query_sql(duckdb_loader, dataset_id: str, schema: dict, filters: dict
             params.extend(codes)
 
     schema_name = schema.get("schema_name", "main")
+    explicit_table = schema.get("table_name")
     quoted_cols = ", ".join([f'"{c}"' for c in columns])
-    sql = "SELECT " + quoted_cols + " FROM " + _fact_name(dataset_id, schema_name)
+    sql = "SELECT " + quoted_cols + " FROM " + _fact_name(dataset_id, schema_name, explicit_table)
     if where_clauses:
         sql += " WHERE " + " AND ".join(where_clauses)
 
@@ -180,19 +207,26 @@ def register(mcp, duckdb_loader, table_schemas: dict):
         """
         out = []
         for ds_id, schema in table_schemas.items():
+            schema_name = schema.get("schema_name", "main")
+            explicit_table = schema.get("table_name")
+            fact_ref = _fact_name(ds_id, schema_name, explicit_table)
+            measure_col = schema.get("measure_column", "value")
+            year_col = "Year" if schema_name == "main" else "year"
             try:
                 row_count = duckdb_loader.execute(
-                    f'SELECT COUNT(*) FROM "{ds_id}"'
-                ).fetchone()[0]
-                max_year = duckdb_loader.execute(
-                    f'SELECT MAX(CAST("Year" AS INTEGER)) FROM "{ds_id}"'
+                    f"SELECT COUNT(*) FROM {fact_ref}"
                 ).fetchone()[0]
             except Exception:
                 row_count = None
+            try:
+                max_year = duckdb_loader.execute(
+                    f"SELECT MAX(CAST(\"{year_col}\" AS INTEGER)) FROM {fact_ref}"
+                ).fetchone()[0]
+            except Exception:
                 max_year = None
             try:
                 source = duckdb_loader.execute(
-                    f'SELECT DISTINCT source FROM "{ds_id}" WHERE source IS NOT NULL LIMIT 1'
+                    f"SELECT DISTINCT source FROM {fact_ref} WHERE source IS NOT NULL LIMIT 1"
                 ).fetchone()
                 source = source[0] if source else "(no source attribution)"
             except Exception:
@@ -215,7 +249,7 @@ def register(mcp, duckdb_loader, table_schemas: dict):
         """Return the full schema for one dataset: dimensions, units, example query.
 
         Args:
-            dataset_id: one of the 7 known dataset IDs (use sparkscout_list_datasets to find).
+            dataset_id: one of the known dataset IDs (use sparkscout_list_datasets to find).
 
         Returns: {dataset_id, columns, dimension_codes, units, example_query,
         sql_guard_hints}.
@@ -223,12 +257,13 @@ def register(mcp, duckdb_loader, table_schemas: dict):
         if dataset_id not in table_schemas:
             return {"error": f"Unknown dataset_id: {dataset_id}. Valid: {list(table_schemas.keys())}"}
         schema = table_schemas[dataset_id]
+        schema_name = schema.get("schema_name", "main")
         dimension_codes = []
         for dim_col in schema["dimension_columns"]:
-            dim_table = _dim_name(dataset_id, dim_col)
+            dim_table = _dim_name(dataset_id, dim_col, schema_name)
             try:
                 codes = duckdb_loader.execute(
-                    f'SELECT code, label FROM "{dim_table}" LIMIT 50'
+                    f"SELECT code, label FROM {dim_table} LIMIT 50"
                 ).fetchall()
                 dimension_codes.append({
                     "column": dim_col,
