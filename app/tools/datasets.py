@@ -36,8 +36,16 @@ def _dim_name(table_id: str, dim_code: str, schema: str = "main", quoted: bool =
     """dim_{table}_{dim_code_lowercased}. PxWeb uses dim_<table>_<dim_code>.
     quoted=True wraps in DuckDB double-quotes (and qualifies schema when not main).
     quoted=False returns the bare identifier for callers that wrap themselves.
+
+    For cost-corpus schemas, dim tables are named after the measure column
+    without the trailing "_id" suffix (e.g. dim_lcoe_weighted_technology,
+    not dim_lcoe_weighted_technology_id). We strip the suffix when building
+    the name to match the convention.
     """
-    name = "dim_" + table_id + "_" + dim_code.lower().replace("/", "_").replace(" ", "_").replace("-", "_")
+    clean_dim = dim_code
+    if schema == "cost" and clean_dim.endswith("_id"):
+        clean_dim = clean_dim[:-3]
+    name = "dim_" + table_id + "_" + clean_dim.lower().replace("/", "_").replace(" ", "_").replace("-", "_")
     if not quoted:
         if schema != "main":
             return schema + "." + name
@@ -70,14 +78,15 @@ def _row_to_dict(columns: list[str], row: tuple) -> dict:
     return {c: v for c, v in zip(columns, row)}
 
 
-def _resolve_filter_values(duckdb_loader, dataset_id: str, dim_col: str, values, table_schemas: dict | None = None) -> list:
+def _resolve_filter_values(duckdb_loader, dataset_id: str, dim_col: str, values, table_schemas: dict | None = None) -> tuple[list, list]:
+    schema_name = (table_schemas or {}).get(dataset_id, {}).get("schema_name", "main")
     """Resolve label strings to codes via the dim table. Falls back to raw values.
 
-    Two-phase match:
-      1. Exact label match (case-insensitive) OR exact code match
-      2. Substring match (case-insensitive) on label
-    Handles "Solar PV" -> "Solar photovoltaic", "Wind" -> "Wind energy",
-    "AFG" -> "AFG" code, "2024" -> "24" string code.
+    Returns:
+        (codes, dropped): codes is the list of resolved dim codes (used in WHERE IN).
+        dropped is the list of input values that did NOT contribute any code
+        (e.g. None, empty string, values absent from the dim table). The caller
+        can surface this to the user so silent filter drops are visible.
     """
     if not isinstance(values, list):
         values = [values]
@@ -100,12 +109,21 @@ def _resolve_filter_values(duckdb_loader, dataset_id: str, dim_col: str, values,
             if code and code not in aliased:
                 aliased.append(code)
         if aliased:
-            return aliased
+            # Identify inputs that were not in the alias map at all (None, "", 3.14, etc.)
+            dropped = [v for v in values
+                       if v is None or v == "" or TECH_ALIASES.get(str(v).lower().strip()) is None]
+            return aliased, dropped
     codes: list[str] = []
+    consumed: set[int] = set()  # indices into values that contributed a code
     # Build a properly-quoted, optionally schema-qualified bare table reference.
     bare = _dim_name(dataset_id, dim_col, schema_name, quoted=False)
     if schema_name != "main":
-        effective_dim_table = chr(34) + schema_name + chr(34) + "." + chr(34) + bare + chr(34)
+        # For cost schema, _dim_name with quoted=False already returns
+        # "schema.table_name" (no quoting). Use it directly.
+        if "." in bare:
+            effective_dim_table = chr(34) + bare.split(".", 1)[0] + chr(34) + "." + chr(34) + bare.split(".", 1)[1] + chr(34)
+        else:
+            effective_dim_table = chr(34) + schema_name + chr(34) + "." + chr(34) + bare + chr(34)
     else:
         effective_dim_table = chr(34) + bare + chr(34)
     try:
@@ -119,33 +137,65 @@ def _resolve_filter_values(duckdb_loader, dataset_id: str, dim_col: str, values,
                 effective_dim_table = chr(34) + bare2 + chr(34)
     try:
         # Phase 1: exact (case-insensitive) label OR code match
-        lowered = [str(v).lower() for v in values]
+        lowered = [str(v).lower() if v is not None else "" for v in values]
         rows = duckdb_loader.execute(
             "SELECT code, label FROM " + effective_dim_table + " WHERE LOWER(label) = ANY(?) OR LOWER(code) = ANY(?)",
             [lowered, lowered],
         ).fetchall()
+        matched_labels = {str(r[1]).lower() for r in rows}
+        matched_codes = {str(r[0]).lower() for r in rows}
         for r in rows:
             if r[0] not in codes:
                 codes.append(r[0])
-        # Phase 2: substring match for any value not yet resolved
-        for v in values:
+        # Mark which inputs matched
+        for i, v in enumerate(values):
+            if v is None or v == "":
+                continue
+            v_lower = lowered[i]
+            if v_lower in matched_labels or v_lower in matched_codes:
+                consumed.add(i)
+        # Phase 2: substring match for any input not yet resolved
+        for i, v in enumerate(values):
+            if i in consumed:
+                continue
+            if v is None or v == "":
+                continue
             v_lower = str(v).lower()
-            if v_lower in lowered:
-                # already matched in Phase 1; double-check we got something
-                if any(c.lower() == v_lower for c in codes):
-                    continue
             rows = duckdb_loader.execute(
                 "SELECT code, label FROM " + effective_dim_table + " WHERE LOWER(label) LIKE ?",
                 [f"%{v_lower}%"],
             ).fetchall()
-            for r in rows:
-                if r[0] not in codes:
-                    codes.append(r[0])
+            if rows:
+                consumed.add(i)
+                for r in rows:
+                    if r[0] not in codes:
+                        codes.append(r[0])
     except Exception as e:
-        codes = [str(v) for v in values]
+        # Dim table query failed. Treat ALL inputs as unresolved.
+        codes = []
+        consumed = set()
     if not codes:
-        codes = [str(v) for v in values]
-    return codes
+        # Nothing resolved. Don't pollute codes with the raw values; let the
+        # caller surface the entire filter as dropped.
+        codes = []
+        consumed = set()
+    # Build the dropped list: any input that didn't contribute a code.
+    # Also explicitly mark None, empty strings, and non-string floats as dropped
+    # so the user knows they didn't apply.
+    dropped: list = []
+    for i, v in enumerate(values):
+        if i in consumed:
+            continue
+        if v is None or v == "":
+            dropped.append(v)
+            continue
+        if isinstance(v, float):
+            # 3.14, 1.5, etc. — almost certainly not a real dim value.
+            dropped.append(v)
+            continue
+        # String that didn't resolve to a code (and isn't None/empty).
+        dropped.append(v)
+    return codes, dropped
 
 
 
@@ -160,21 +210,30 @@ def _build_query_sql(duckdb_loader, dataset_id: str, schema: dict, filters: dict
         columns = all_cols
     for c in columns:
         if c not in all_cols:
-            return {"error": f"Unknown column: {c}", "available": all_cols}, None, None
+            return {"error": f"Unknown column: {c}", "available": all_cols}, None, None, None, None
     limit = min(max(1, limit), 10_000)
 
     reverse_alias = {v: k for k, v in schema["filter_aliases"].items()}
     where_clauses = []
     params: list = []
+    filters_applied: dict[str, list] = {}
+    filters_dropped: dict[str, list] = {}
     if filters:
         for alias, values in filters.items():
             if alias not in reverse_alias:
-                return {"error": f"Unknown filter: {alias}", "available": list(reverse_alias.keys())}, None, None
+                return {"error": f"Unknown filter: {alias}", "available": list(reverse_alias.keys())}, None, None, None, None
             dim_col = reverse_alias[alias]
-            codes = _resolve_filter_values(duckdb_loader, dataset_id, dim_col, values, table_schemas)
+            codes, dropped = _resolve_filter_values(duckdb_loader, dataset_id, dim_col, values, table_schemas)
+            if not codes:
+                # No codes resolved at all for this alias — skip WHERE clause, surface drop
+                filters_dropped[alias] = list(values) if isinstance(values, list) else [values]
+                continue
             placeholders = ",".join(["?"] * len(codes))
             where_clauses.append(f'"{dim_col}" IN ({placeholders})')
             params.extend(codes)
+            filters_applied[alias] = codes
+            if dropped:
+                filters_dropped[alias] = dropped
 
     schema_name = schema.get("schema_name", "main")
     explicit_table = schema.get("table_name")
@@ -188,13 +247,13 @@ def _build_query_sql(duckdb_loader, dataset_id: str, schema: dict, filters: dict
         col = parts[0]
         direction = parts[1].upper() if len(parts) > 1 else "ASC"
         if col not in all_cols:
-            return {"error": f"Unknown order_by column: {col}", "available": all_cols}, None, None
+            return {"error": f"Unknown order_by column: {col}", "available": all_cols}, None, None, None, None
         if direction not in ("ASC", "DESC"):
-            return {"error": f"Invalid direction: {direction}"}, None, None
+            return {"error": f"Invalid direction: {direction}"}, None, None, None, None
         sql += f' ORDER BY "{col}" {direction}'
 
     sql += f" LIMIT {int(limit)}"
-    return None, sql, params
+    return None, sql, params, filters_applied, filters_dropped
 
 
 def register(mcp, duckdb_loader, table_schemas: dict):
@@ -317,8 +376,12 @@ def register(mcp, duckdb_loader, table_schemas: dict):
         if dataset_id not in table_schemas:
             return {"error": f"Unknown dataset_id: {dataset_id}"}
         schema = table_schemas[dataset_id]
-        err, sql, params = _build_query_sql(
-            duckdb_loader, dataset_id, schema, filters, columns, limit, order_by, table_schemas
+        # Surface limit clamping: only adjust silently, but include both in response
+        original_limit = limit
+        effective_limit = min(max(1, limit), 10_000)
+        limit_clamped = effective_limit != original_limit
+        err, sql, params, filters_applied, filters_dropped = _build_query_sql(
+            duckdb_loader, dataset_id, schema, filters, columns, effective_limit, order_by, table_schemas
         )
         if err:
             return err
@@ -335,9 +398,14 @@ def register(mcp, duckdb_loader, table_schemas: dict):
             "columns": out_cols,
             "rows": [_row_to_dict(out_cols, r) for r in result],
             "row_count": len(result),
-            "truncated": len(result) >= limit,
+            "truncated": len(result) >= effective_limit,
             "citations": citations,
             "sql_executed": sql,
+            "filters_applied": filters_applied,
+            "filters_dropped": filters_dropped,
+            "limit_requested": original_limit,
+            "limit_applied": effective_limit,
+            "limit_clamped": limit_clamped,
         }
 
     @mcp.tool
@@ -426,7 +494,7 @@ def register(mcp, duckdb_loader, table_schemas: dict):
         if dataset_id not in table_schemas:
             return {"error": f"Unknown dataset_id: {dataset_id}"}
         schema = table_schemas[dataset_id]
-        err, sql, params = _build_query_sql(
+        err, sql, params, _, _ = _build_query_sql(
             duckdb_loader, dataset_id, schema, filters, None, 11, None, table_schemas
         )
         if err:
