@@ -1,12 +1,15 @@
 """Fusion tool — 1 tool. Report search + dataset candidates, no auto-routing.
 
-sparkscout_answer_question searches reports, lists which datasets might answer
+irena_answer_question searches reports, lists which datasets might answer
 the quantitative side of the question, and returns DatasetHint objects.
-The LLM picks which dataset to query and calls sparkscout_query_dataset
+The LLM picks which dataset to query and calls irena_query_dataset
 explicitly. No SQL execution in this tool.
+
+Async tool wrapper so the FastMCP event loop stays unblocked under
+concurrent sessions. FTS5 I/O is dispatched via asyncio.to_thread.
 """
 
-import re
+import asyncio
 
 
 def _keyword_hits(text: str, dim_codes: list[str]) -> set:
@@ -21,63 +24,13 @@ def _keyword_hits(text: str, dim_codes: list[str]) -> set:
     return hits
 
 
-# Stopwords for natural-language question tokenization.
-_QUESTION_STOPWORDS = frozenset({
-    "a", "an", "and", "are", "as", "at", "be", "by", "do", "does", "for",
-    "from", "has", "have", "how", "i", "in", "is", "it", "its", "of", "on",
-    "or", "say", "says", "that", "the", "their", "them", "they", "this",
-    "to", "was", "what", "when", "where", "which", "who", "why", "with",
-    "you", "your", "about", "irena", "can", "could", "would", "should",
-    "into", "over", "under", "between", "these", "those", "been", "being",
-})
-
-
-def _tokenize_question(question: str) -> list[str]:
-    """Lowercase, strip punctuation, drop English stopwords; keep short tokens."""
-    toks = re.findall(r"[a-z0-9][a-z0-9-]+", question.lower())
-    return [t for t in toks if t not in _QUESTION_STOPWORDS and len(t) >= 2]
-
-
-def _answer_question_search(fts5_index, question: str, top_k: int) -> list[dict]:
-    """Search the report index for a natural-language question.
-
-    Splits the question into keywords (after stopword + punctuation cleanup),
-    then ORs their per-term search results and merges by report_id, scoring
-    each report by the minimum BM25 across the matched terms (so that
-    multi-term matches outrank single-term ones).
-
-    Falls back to a phrase search when no usable tokens remain so that the
-    caller never sees 0 hits for short or non-English input.
-    """
-    tokens = _tokenize_question(question)
-    if not tokens:
-        return fts5_index.search(question, top_k=top_k)
-
-    # Per-token: ask the index. Merging keyed by report_id.
-    merged: dict[str, dict] = {}
-    for term in tokens:
-        for hit in fts5_index.search(term, top_k=top_k):
-            rid = hit["report_id"]
-            score = float(hit.get("score", 0.0))
-            if rid not in merged:
-                merged[rid] = dict(hit)
-                merged[rid]["score"] = score
-                merged[rid]["matched_terms"] = [term]
-            else:
-                merged[rid]["matched_terms"].append(term)
-                # Lower score = better in BM25; accumulate the min.
-                merged[rid]["score"] = min(merged[rid]["score"], score)
-    ranked = sorted(merged.values(), key=lambda h: h.get("score", 0.0))
-    return ranked[:top_k]
-
-
 def register(mcp, fts5_index, table_schemas: dict):
     @mcp.tool
-    def sparkscout_answer_question(question: str, top_k_reports: int = 3) -> dict:
+    async def irena_answer_question(question: str, top_k_reports: int = 3) -> dict:
         """Search IRENA reports for the question and surface dataset candidates.
 
         No dataset auto-routing. Returns report search hits and DatasetHint[]
-        listing plausible datasets; the LLM picks and calls sparkscout_query_dataset.
+        listing plausible datasets; the LLM picks and calls irena_query_dataset.
 
         Args:
             question: natural language question.
@@ -86,7 +39,9 @@ def register(mcp, fts5_index, table_schemas: dict):
         Returns: {question, reports, citation_block, notes, dataset_candidates}.
         """
         top_k_reports = max(1, min(top_k_reports, 10))
-        hits = _answer_question_search(fts5_index, question, top_k=top_k_reports)
+        def _search():
+            return fts5_index.search(question, top_k=top_k_reports)
+        hits = await asyncio.to_thread(_search)
         reports = []
         for h in hits:
             meta = h.get("metadata", {})
@@ -134,7 +89,7 @@ def register(mcp, fts5_index, table_schemas: dict):
                     "relevance_score": score,
                     "reason": "; ".join(reasons),
                     "filter_aliases": list(schema["filter_aliases"].keys()),
-                    "example_call": f'sparkscout_query_dataset(dataset_id="{ds_id}", filters={{...}}, limit=10)',
+                    "example_call": f'irena_query_dataset(dataset_id="{ds_id}", filters={{...}}, limit=10)',
                 })
         candidates.sort(key=lambda c: c["relevance_score"], reverse=True)
 
@@ -142,7 +97,7 @@ def register(mcp, fts5_index, table_schemas: dict):
         if not reports:
             notes.append("no reports matched the question text")
         if not candidates:
-            notes.append("no datasets seemed relevant; try sparkscout_list_datasets to browse")
+            notes.append("no datasets seemed relevant; try irena_list_datasets to browse")
 
         return {
             "question": question,
