@@ -44,7 +44,7 @@ How it works:
 Tool names: the harness targets `irena_*` (the Python function
 names registered by `@mcp.tool`). FastMCP 4.0 does not apply the
 instance-name prefix that 3.x did; the public MCP surface and this
-harness both use `irena_*`. Earlier versions used `sparkscout_*` —
+harness both use `irena_*`. Earlier versions used `irena_*` —
 that is wrong for 4.0.
 
 Default config: 10 batches x 100 calls x 5 users = 1000 calls.
@@ -214,47 +214,47 @@ def random_cost_filters():
 def gen_test(rng):
     r = rng.random()
     if r < 0.10:
-        return ("meta-list", "sparkscout_list_datasets", {})
+        return ("meta-list", "irena_list_datasets", {})
     if r < 0.18:
-        return ("meta-one", "sparkscout_get_dataset_meta",
+        return ("meta-one", "irena_get_dataset_meta",
                 {"dataset_id": rng.choice(ALL_DATASETS)})
     if r < 0.55:
         ds = rng.choice(PXWEB_DATASETS)
-        return ("query-pxweb", "sparkscout_query_dataset",
+        return ("query-pxweb", "irena_query_dataset",
                 {"dataset_id": ds, "filters": random_pxweb_filters(),
                  "limit": rng.randint(1, 50)})
     if r < 0.70:
-        return ("query-cost", "sparkscout_query_dataset",
+        return ("query-cost", "irena_query_dataset",
                 {"dataset_id": "lcoe_weighted",
                  "filters": random_cost_filters(),
                  "limit": rng.randint(1, 50)})
     if r < 0.78:
-        return ("query-no-filter", "sparkscout_query_dataset",
+        return ("query-no-filter", "irena_query_dataset",
                 {"dataset_id": rng.choice(ALL_DATASETS),
                  "limit": rng.randint(1, 20)})
     if r < 0.83:
-        return ("query-bad-dataset", "sparkscout_query_dataset",
+        return ("query-bad-dataset", "irena_query_dataset",
                 {"dataset_id": rng.choice(["foo", "bar_baz", "LCOE_WEIGHTED",
                                             "", "lcoe weighted",
                                             "lcoe_weighted_typo"]),
                  "limit": 5})
     if r < 0.88:
-        return ("query-bad-filter", "sparkscout_query_dataset",
+        return ("query-bad-filter", "irena_query_dataset",
                 {"dataset_id": rng.choice(ALL_DATASETS),
                  "filters": {"currencies": ["USD"], "garbage": ["x"]},
                  "limit": 5})
     if r < 0.92:
-        return ("query-weird-types", "sparkscout_query_dataset",
+        return ("query-weird-types", "irena_query_dataset",
                 {"dataset_id": rng.choice(ALL_DATASETS),
                  "filters": {"years": ["twenty-twenty-four", None, 3.14],
                              "technologies": [None, "", 0]},
                  "limit": 5})
     if r < 0.95:
-        return ("query-edge-limits", "sparkscout_query_dataset",
+        return ("query-edge-limits", "irena_query_dataset",
                 {"dataset_id": rng.choice(ALL_DATASETS),
                  "limit": rng.choice([-5, 0, 1, 999999, 100000])})
     if r < 0.97:
-        return ("fusion-natural", "sparkscout_answer_question",
+        return ("fusion-natural", "irena_answer_question",
                 {"question": rng.choice([
                     "What is the LCOE of solar PV?",
                     "weighted-average LCOE solar pv 2024",
@@ -266,7 +266,7 @@ def gen_test(rng):
                     "wind capacity growth Africa",
                     "solar PV vs onshore wind cost",
                 ])})
-    return ("fusion-edge", "sparkscout_answer_question",
+    return ("fusion-edge", "irena_answer_question",
             {"question": rng.choice([
                 "",
                 " ",
