@@ -33,17 +33,17 @@ Renewable energy data for AI assistants, with the source attached.
 
 ## 🛰️ What it is
 
-SparkScout is an MCP server that exposes a curated renewable-energy corpus to AI assistants. Every response carries the citation needed to trace the figure or excerpt back to its source.
+SparkScout is an MCP server that gives an AI assistant a large, citable body of renewable-energy knowledge to draw on. Every response carries the citation needed to trace the figure or excerpt back to its source, so the assistant's answer is verifiable end to end.
 
-The corpus at this revision holds 56 IRENA publications and 8 statistical datasets (196,696 rows) covering power capacity, electricity generation, renewable share, heat generation, public finance flows, and weighted-average LCOE.
+A natural-language question can be answered in a single round trip: the server searches the publication corpus, retrieves the relevant chapter, surfaces the dataset that holds the quantitative answer, and returns both with citations. The same tools also serve quick factual lookups against the statistical tables.
 
-The server exposes 12 MCP tools. A natural-language question can be answered end to end: search the publication corpus, retrieve a chapter, surface the dataset that holds the quantitative answer, and return both with citations. The same tools also serve quick factual lookups against the statistical tables.
+The corpus grows by ingesting new publishers and new publications; the [📊 Status of the corpus](#-status-of-the-corpus) section below carries the current numbers and the per-dataset detail.
 
 ## 👥 Who it is for
 
-- **Energy analysts and policy researchers** who need a number or finding with the citation attached. The answer comes back tagged with the dataset or publication it came from; the analyst verifies against the source.
-- **Agent builders** who want to wire a renewable-energy corpus into Claude, Cursor, Cline, Continue, or any MCP-compatible client. The 12 tools are the contract; `docs/integrate.md` carries the per-client setup blocks.
-- **Operators** who run their own instance. The corpus is read-only at runtime; a local DuckDB snapshot and a directory of Markdown reports are the only inputs.
+- **Decision-makers** who need a numeric answer with the citation attached. The answer comes back tagged with the dataset or publication it came from; the reader verifies against the source before quoting.
+- **Agent builders** who want to wire a renewable-energy corpus into Claude, Cursor, Cline, Continue, or any MCP-compatible client. The 12 MCP tools are the contract; see [🧪 Integration guide](./docs/integrate.md) for per-client setup blocks.
+- **Operators** who run their own instance. The corpus is read-only at runtime; a local DuckDB snapshot and a directory of source documents are the only inputs.
 
 ## 🚀 Quickstart
 
@@ -74,9 +74,15 @@ A natural-language question, end to end. The user asks the assistant; the assist
 
 > **User:** What was Brazil's installed solar capacity in 2024?
 >
-> **Assistant (after calling `irena_query_dataset`):** Brazil's installed solar PV capacity at the end of 2024 was 53,107 MW, up from 37,557 MW at the end of 2023. Source: IRENA (2026), Renewable Capacity Statistics 2026.
+> **Assistant (after calling `irena_query_dataset`):** Brazil's installed solar PV capacity at the end of 2024 was 53,107 MW, up from 37,557 MW at the end of 2023. The citation block in the response identified the source publication; the assistant quotes it directly.
 
-The full call sequence, the filter surface, and the citation block are documented in `docs/integrate.md`.
+When the question is broader or paraphrased, the way real policy questions are written, hybrid retrieval takes over:
+
+> **User:** What is the cost of solar PV in 2025?
+>
+> **Assistant (after calling `irena_answer_question`):** Two publications in the corpus cover this, and the assistant cites them both. The retrieval block flagged the answer as a dense-only match (the question triggered no BM25 keyword hits), so the assistant noted the limitation and pointed the user at the cited publications for verification.
+
+The full call sequence, the filter surface, and the citation block format are documented in the [🧪 Integration guide](./docs/integrate.md).
 
 ## 🧰 Tools
 
@@ -87,7 +93,7 @@ The full call sequence, the filter surface, and the citation block are documente
 | `irena_search_reports` | reports | Hybrid search across reports (BM25 + dense, fused via RRF) |
 | `irena_embed_health` | diagnostics | Embedding-store health (operator-side; model, dim, indexed count) |
 | `irena_cite` | reports | Formatted citation string |
-| `irena_list_datasets` | datasets | List the 8 statistical datasets (7 PxWeb + 1 cost corpus) |
+| `irena_list_datasets` | datasets | List the registered statistical datasets |
 | `irena_get_dataset_meta` | datasets | Schema and sample codes for one dataset |
 | `irena_query_dataset` | datasets | Filtered, parameterised query with citations |
 | `irena_query_dataset_aggregations` | datasets | Group-by with sum, avg, count, min, max |
@@ -112,7 +118,9 @@ Each metric is stored in its own table rather than collapsed into a single wide 
 
 ## 📊 Status of the corpus
 
-The numbers below are pulled live from the DuckDB snapshot at the time of this revision (2026-09-08). Run `irena_list_datasets` against the running server to refresh after pulling a new snapshot.
+The corpus is a working catalogue. It grows by ingesting new publishers, refreshing existing ones on the upstream publication cycle, and registering new dataset shapes as the schema stabilises. The numbers below reflect the snapshot at the time of this README revision; run `irena_list_datasets` against the running server for the live count.
+
+The current revision of the corpus draws on a single upstream publisher of public renewable-energy statistics and the publication archive that publisher curates. Attribution and reuse rules are documented in [NOTICE](./NOTICE). New publishers are added without breaking existing tool contracts; the framework treats every publisher the same way.
 
 ### Statistical datasets
 
@@ -129,7 +137,7 @@ The numbers below are pulled live from the DuckDB snapshot at the time of this r
 
 ### Publications
 
-56 markdown reports indexed. Energy transition outlooks, technology briefings (solar, wind, hydrogen, storage), regional analyses, policy briefs. Year, ISBN, and citation are extracted from each report's frontmatter.
+A growing corpus of markdown reports spanning energy transition outlooks, technology briefings (solar, wind, hydrogen, storage), regional analyses, and policy briefs. Run [`irena_list_reports`](./docs/integrate.md) to enumerate the publications currently indexed; the live count and per-report metadata are returned in the response. Year, ISBN, and the original citation block are extracted from each report's frontmatter so the agent can cite without re-fetching.
 
 ### Covered today
 
@@ -188,7 +196,7 @@ sparkscout/
 │   ├── Dockerfile             Python 3.13-slim, runs under uv
 │   ├── fastmcp.json           FastMCP runtime config
 │   ├── server.py              Entry point, table schemas, SIGHUP reload
-│   ├── stress_harness.py      Concurrent-session verifier (app/stress_harness.py)
+│   ├── stress_harness.py      Concurrent-session verifier
 │   └── tools/
 │       ├── datasets.py        6 dataset tools over DuckDB
 │       ├── duckdb_loader.py   Read-only DuckDB connection manager
@@ -230,11 +238,12 @@ uv run --with duckdb python tools/embed_corpus.py --reindex
 ## ⚠️ Known issues
 
 - When a natural-language question has no BM25 keyword matches, hybrid retrieval falls back to the dense retriever and returns hits flagged with `sources: ["dense"]` along with a `notes` line in `irena_answer_question`. This is intentional transparency for LLM agents, not a bug. Verify dense-only hits against the cited publication before quoting.
+- The corpus currently reflects a single upstream publisher's publication cycle. Multi-publisher coverage (additional public sources, climate-policy documents) is in active planning and will be added without breaking the existing tool contracts.
 
 ## 📄 License
 
-- SparkScout source code: see [LICENSE](./LICENSE). MIT with an appended clause covering intellectual property in upstream content.
-- Retrieved data and report text: see [NOTICE](./NOTICE). The statistics and publication text returned by this server remain subject to the upstream publisher's terms of use.
+- SparkScout source code: [LICENSE](./LICENSE). MIT with an appended clause covering intellectual property in upstream content.
+- Retrieved data and report text: [NOTICE](./NOTICE). The statistics and publication text returned by this server remain subject to the upstream publisher's terms of use.
 
 ## 🙏 Acknowledgement
 
