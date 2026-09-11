@@ -137,24 +137,24 @@ When the question is paraphrased the way a policy researcher actually asks it, t
 >   "reports": [
 >     {
 >       "report_id": "IRENA_TEC_Battery_storage_minigrids_W_Africa_2026",
->       "excerpt": "While global efforts are directed towards tripling renewable power capacity by 2030 under the COP 28 UAE Consensus, in support of the Paris Agreement's 1.5°C climate goal, many regions continue to face significant challenges in providing decent and affordable electricity access to all. Western Africa is the second-largest [region]…",
+>       "excerpt": "While global efforts are directed towards tripling renewable power capacity by 2030 under the COP 28 UAE Consensus, in support of the Paris Agreement's 1.5°C climate goal, many regions continue to face significant challenges in providing decent and affordable electricity access to all. Western Africa is the second-largest…",
 >       "rrf_score": 0.0164,
 >       "sources": ["dense"]
 >     },
 >     {
->       "report_id": "IRENA_Grid_assessment_study_Mozambique_2023",
->       "excerpt": "This grid assessment study investigates the behaviour of the power system of the Republic of Mozambique for different years in the time horizon 2022 to 2042, with the inclusion of different shares of VRE and with the proposed expansion plans identified by the utility Electricidade de Moçambique (EDM)…",
->       "rrf_score": 0.0161,
+>       "report_id": "IRENA_TEC_Powering_climate_resilience_FWA_2026",
+>       "excerpt": "Francophone West Africa (FWA) – comprising Benin, Burkina Faso, Côte d'Ivoire, Guinea, Mali, Niger, Senegal and Togo – faces a convergence of intensifying climate risks and persistent gaps in electricity access and service quality. Climate hazards in the region are already evident. Temperatures across the Sahel…",
+>       "rrf_score": 0.0159,
 >       "sources": ["dense"]
 >     },
 >     {
->       "report_id": "IRENA_TEC_Powering_climate_resilience_FWA_2026",
->       "excerpt": "POWERING CLIMATE RESILIENCE IN FRANCOPHONE WEST AFRICA. This brief examines the multi-dimensional relationship between energy access and climate resilience, with a focus on the role that decentralised renewable energy systems can play in Francophone West Africa…",
->       "rrf_score": 0.0159,
+>       "report_id": "IRENA_INN_Sustainable_development_renewables_Senegal_2026",
+>       "excerpt": "Senegal is a coastal state located at the westernmost tip of Africa, serving as a bridge between the Sahel and the tropical savannah. With a population of 19 million in 2025 and a rapidly growing economy – its GDP has tripled over the past two decades – the country is among Africa's fastest-growing economies…",
+>       "rrf_score": 0.0156,
 >       "sources": ["dense"]
 >     }
 >   ],
->   "citation_block": "[reports: IRENA_TEC_Battery_storage_minigrids_W_Africa_2026, IRENA_Grid_assessment_study_Mozambique_2023, IRENA_TEC_Powering_climate_resilience_FWA_2026]",
+>   "citation_block": "[reports: IRENA_TEC_Battery_storage_minigrids_W_Africa_2026, IRENA_TEC_Powering_climate_resilience_FWA_2026, IRENA_INN_Sustainable_development_renewables_Senegal_2026]",
 >   "notes": [
 >     "BM25 returned no hits; results are dense-only and may need verification"
 >   ],
@@ -162,7 +162,7 @@ When the question is paraphrased the way a policy researcher actually asks it, t
 > }
 > ```
 >
-> Three reports cover the question, all from the West Africa / African power-system corpus. The lead excerpt on the top hit is real content from the introduction, not frontmatter boilerplate. The `retrieval` block flags the answer as **dense-only** (BM25 returned zero hits, so the retriever leaned entirely on semantic similarity), and the assistant notes that the user should verify against the cited publications before quoting. Hit-shape carries `rrf_score`, per-retriever `sources`, the `report_id` for the next-step citation lookup, and an `excerpt` field that holds the **first paragraph of the body**, capped at 320 chars. The excerpt is a fallback snippet, not the answer to the question; the assistant follows up with `irena_get_report(report_id=…, chapter=…)` to read the chapter that actually discusses the topic.
+> Three reports cover the question, all from the West Africa / Sahel region. The lead excerpt on each hit is real content from the body, not frontmatter boilerplate or a table-of-contents entry. The `retrieval` block flags the answer as **dense-only** (BM25 returned zero hits, so the retriever leaned entirely on semantic similarity), and the assistant notes that the user should verify against the cited publications before quoting. Hit-shape carries `rrf_score`, per-retriever `sources`, the `report_id` for the next-step citation lookup, and an `excerpt` field that holds the **first paragraph of the body**, capped at 320 chars. The excerpt is a fallback snippet, not the answer to the question; the assistant follows up with `irena_get_report(report_id=…, chapter=…)` to read the chapter that actually discusses the topic.
 
 The full call sequence, the filter surface, and the citation block format are documented in the [🧪 Integration guide](./docs/integrate.md).
 
