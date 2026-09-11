@@ -164,20 +164,40 @@ class FTS5Index:
         past_boilerplate = False
         start = 0
         import re
+        # Skip past the table of contents (CONTENTS, ABBREVIATIONS,
+        # DEFINITIONS) if present. Their headings match INTRODUCTION
+        # loosely and the TOC entries are not the body prose.
+        in_toc = False
         for i, line in enumerate(lines):
             stripped = line.strip()
             if not stripped.startswith("#"):
+                # If we hit a non-heading line, we are out of the TOC
+                # even if we never saw an explicit CONTENTS heading.
+                in_toc = False
                 continue
-            # Match `# 1.`, `## 2.`, `### 3.` (chapter starts with a
-            # number and a period, with optional whitespace).
-            m = re.match(r"^#{1,6}\s+\d+\.\s+\S", stripped)
+            if stripped.lower().lstrip("#").strip().startswith(
+                ("contents", "table of contents", "abbreviations", "definitions", "foreword", "preface")
+            ):
+                in_toc = True
+                continue
+            if in_toc:
+                continue
+            # Match `# 1.`, `## 2.` (chapter starts with a number and a
+            # period, level 1 or 2 only). Level-3+ TOC entries with the
+            # same shape (e.g. `###### 1. CONCEPTUAL FRAMING...`) are
+            # filtered out by the heading-level restriction.
+            m = re.match(r"^#{1,2}\s+\d+\.\s+\S", stripped)
             if m:
                 past_boilerplate = True
                 start = i + 1
                 break
             # Some reports use a named first chapter heading instead.
-            head = re.sub(r"^#+\s*", "", stripped).lower()
-            if head.startswith("introduction") or head.startswith("executive summary"):
+            # Allow levels 1-3 (e.g. `## INTRODUCTION`, `### EXECUTIVE
+            # SUMMARY`); reject deeper levels because those match
+            # `#### INTRODUCTION` inside the TOC of reports where
+            # CONTENTS, ABBREVIATIONS, DEFINITIONS are emitted at
+            # deeper heading levels.
+            if re.match(r"^#{1,3}\s+(INTRODUCTION|EXECUTIVE\s+SUMMARY)\b", stripped, re.IGNORECASE):
                 past_boilerplate = True
                 start = i + 1
                 break
