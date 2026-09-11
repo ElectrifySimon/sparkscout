@@ -31,7 +31,7 @@ Renewable energy data for AI assistants, with the source attached.
 - [License](#-license)
 - [Acknowledgement](#-acknowledgement)
 
-## What it is
+## 🛰️ What it is
 
 SparkScout is an MCP server that exposes a curated renewable-energy corpus to AI assistants. Every response carries the citation needed to trace the figure or excerpt back to its source.
 
@@ -39,13 +39,13 @@ The corpus at this revision holds 56 IRENA publications and 8 statistical datase
 
 The server exposes 12 MCP tools. A natural-language question can be answered end to end: search the publication corpus, retrieve a chapter, surface the dataset that holds the quantitative answer, and return both with citations. The same tools also serve quick factual lookups against the statistical tables.
 
-## Who it is for
+## 👥 Who it is for
 
 - **Energy analysts and policy researchers** who need a number or finding with the citation attached. The answer comes back tagged with the dataset or publication it came from; the analyst verifies against the source.
 - **Agent builders** who want to wire a renewable-energy corpus into Claude, Cursor, Cline, Continue, or any MCP-compatible client. The 12 tools are the contract; `docs/integrate.md` carries the per-client setup blocks.
 - **Operators** who run their own instance. The corpus is read-only at runtime; a local DuckDB snapshot and a directory of Markdown reports are the only inputs.
 
-## Quickstart
+## 🚀 Quickstart
 
 Prerequisites: Python 3.13+, [uv](https://docs.astral.sh/uv/), DuckDB 1.1.3, FastMCP 4.0.0, the upstream DuckDB snapshot at `./data/irena/irena.duckdb`, and the report markdowns at `./data/reports/`.
 
@@ -68,7 +68,7 @@ curl http://127.0.0.1:8000/health
 
 The server binds to `0.0.0.0:8000`. The MCP client config for a live hosted endpoint is not yet published; deployment information will be added when public access is opened.
 
-## Worked example
+## 💬 Worked example
 
 A natural-language question, end to end. The user asks the assistant; the assistant calls SparkScout on the user's behalf; the answer comes back with the citation that makes it usable.
 
@@ -78,7 +78,7 @@ A natural-language question, end to end. The user asks the assistant; the assist
 
 The full call sequence, the filter surface, and the citation block are documented in `docs/integrate.md`.
 
-## Tools
+## 🧰 Tools
 
 | Tool | Layer | Purpose |
 |---|---|---|
@@ -97,7 +97,7 @@ The full call sequence, the filter surface, and the citation block are documente
 
 All 12 tools return JSON. Dataset responses include an inline citation block in the form `[data: <dataset_id>, rows=N, filter=...]`.
 
-## Cost corpus
+## 💰 Cost corpus
 
 SparkScout exposes a curated extract of the IRENA *Renewable Power Generation Costs 2025* report alongside the IRENASTAT PxWeb datasets. The extract is loaded as a second, read-only DuckDB file attached under the schema name `cost`, so the same dataset tools can query it without a separate path.
 
@@ -110,7 +110,7 @@ Each metric is stored in its own table rather than collapsed into a single wide 
 > [!NOTE]
 > The remaining extracts (installed cost, capacity factor, O&M, WACC, financing, price components) are loaded into the database but not yet surfaced through the dataset tools. They will be registered incrementally as the schema stabilises. Adding any one is a 10-line `TABLE_SCHEMAS` entry plus dim-table lookups for the columns it filters on.
 
-## Status of the corpus
+## 📊 Status of the corpus
 
 The numbers below are pulled live from the DuckDB snapshot at the time of this revision (2026-09-08). Run `irena_list_datasets` against the running server to refresh after pulling a new snapshot.
 
@@ -146,7 +146,7 @@ The numbers below are pulled live from the DuckDB snapshot at the time of this r
 > - **Live network access.** The MCP endpoint is not yet registered publicly. The [Quickstart](#-quickstart) runs the server locally.
 > - **Cost corpus tables beyond `lcoe_weighted`.** TIC, CF, O&M, WACC, financing, price, and cost components exist in the `cost` DuckDB schema but are not yet registered in `TABLE_SCHEMAS`, so the dataset tools cannot reach them.
 
-## Data path
+## 🗺️ Data path
 
 ```
               ┌────────────────────────┐
@@ -171,7 +171,7 @@ The numbers below are pulled live from the DuckDB snapshot at the time of this r
 
 Two storage backends, both read-only at runtime. DuckDB serves the 7 statistical tables; the FTS5 index is rebuilt from the markdown folder on startup or on SIGHUP. The operator guide (`docs/operator-guide.md`) covers the full ingestion pipeline, the chunking strategy, and the refresh lifecycle in detail.
 
-## Architecture choices
+## 🌐 Architecture choices
 
 - SQL is built with parameter binding. Dataset identifiers and column names are whitelisted against the in-process `TABLE_SCHEMAS` map before any query is constructed; no string interpolation touches user input.
 - The FTS5 index is in-memory and rebuilt on SIGHUP. A single SIGHUP to the process refreshes both DuckDB and the report index without dropping connections.
@@ -180,7 +180,7 @@ Two storage backends, both read-only at runtime. DuckDB serves the 7 statistical
 - All MCP tool handlers are `async`; blocking DuckDB and FTS5 I/O is wrapped in `asyncio.to_thread` so the FastMCP event loop multiplexes concurrent sessions. Verified at 10 concurrent users with 0 malformed responses.
 - `irena_search_reports` and `irena_answer_question` do hybrid retrieval: BM25 over the in-memory FTS5 index plus dense cosine similarity over `nomic-embed-text` 768-dim vectors, fused via Reciprocal Rank Fusion (k=60). The dense vectors live in a separate DuckDB file (`IRENA_DATA_DIR/embeddings.duckdb`), pre-computed on the host and bind-mounted read-only into the container. Each hit carries per-retriever ranks and scores plus a `sources` list.
 
-## Repository layout
+## 🗂 Repository layout
 
 ```
 sparkscout/
@@ -204,7 +204,7 @@ sparkscout/
 └── .gitignore                 Excludes operator-only paths
 ```
 
-## Tests
+## ✅ Tests
 
 The repository ships with a stress harness at `app/stress_harness.py` and manual verification scripts that exercise the bug fixes from the initial release: technology alias resolution, plural-safe dim table lookup, and natural-language question tokenisation.
 
@@ -227,15 +227,15 @@ To rebuild the embedding store after adding reports or switching models:
 uv run --with duckdb python tools/embed_corpus.py --reindex
 ```
 
-## Known issues
+## ⚠️ Known issues
 
 - When a natural-language question has no BM25 keyword matches, hybrid retrieval falls back to the dense retriever and returns hits flagged with `sources: ["dense"]` along with a `notes` line in `irena_answer_question`. This is intentional transparency for LLM agents, not a bug. Verify dense-only hits against the cited publication before quoting.
 
-## License
+## 📄 License
 
 - SparkScout source code: see [LICENSE](./LICENSE). MIT with an appended clause covering intellectual property in upstream content.
 - Retrieved data and report text: see [NOTICE](./NOTICE). The statistics and publication text returned by this server remain subject to the upstream publisher's terms of use.
 
-## Acknowledgement
+## 🙏 Acknowledgement
 
 This server is a thin interface over publicly available renewable energy data. All statistical findings carry inline citations; all publication excerpts carry the original citation block. Reuse of retrieved content should preserve those citations.
