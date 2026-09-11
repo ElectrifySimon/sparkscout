@@ -37,12 +37,12 @@ SparkScout is an MCP server that exposes a curated renewable-energy corpus to AI
 
 The corpus at this revision holds 56 IRENA publications and 8 statistical datasets (196,696 rows) covering power capacity, electricity generation, renewable share, heat generation, public finance flows, and weighted-average LCOE.
 
-The server exposes 11 MCP tools. A natural-language question can be answered end to end: search the publication corpus, retrieve a chapter, surface the dataset that holds the quantitative answer, and return both with citations. The same tools also serve quick factual lookups against the statistical tables.
+The server exposes 12 MCP tools. A natural-language question can be answered end to end: search the publication corpus, retrieve a chapter, surface the dataset that holds the quantitative answer, and return both with citations. The same tools also serve quick factual lookups against the statistical tables.
 
 ## Who it is for
 
 - **Energy analysts and policy researchers** who need a number or finding with the citation attached. The answer comes back tagged with the dataset or publication it came from; the analyst verifies against the source.
-- **Agent builders** who want to wire a renewable-energy corpus into Claude, Cursor, Cline, Continue, or any MCP-compatible client. The 11 tools are the contract; `docs/integrate.md` carries the per-client setup blocks.
+- **Agent builders** who want to wire a renewable-energy corpus into Claude, Cursor, Cline, Continue, or any MCP-compatible client. The 12 tools are the contract; `docs/integrate.md` carries the per-client setup blocks.
 - **Operators** who run their own instance. The corpus is read-only at runtime; a local DuckDB snapshot and a directory of Markdown reports are the only inputs.
 
 ## Quickstart
@@ -84,7 +84,8 @@ The full call sequence, the filter surface, and the citation block are documente
 |---|---|---|
 | `irena_list_reports` | reports | List publications in the corpus |
 | `irena_get_report` | reports | Fetch a report body or single chapter |
-| `irena_search_reports` | reports | BM25 full-text search across reports |
+| `irena_search_reports` | reports | Hybrid search across reports (BM25 + dense, fused via RRF) |
+| `irena_embed_health` | diagnostics | Embedding-store health (operator-side; model, dim, indexed count) |
 | `irena_cite` | reports | Formatted citation string |
 | `irena_list_datasets` | datasets | List the 8 statistical datasets (7 PxWeb + 1 cost corpus) |
 | `irena_get_dataset_meta` | datasets | Schema and sample codes for one dataset |
@@ -92,9 +93,9 @@ The full call sequence, the filter surface, and the citation block are documente
 | `irena_query_dataset_aggregations` | datasets | Group-by with sum, avg, count, min, max |
 | `irena_get_dataset_value` | datasets | Convenience scalar lookup |
 | `irena_sample_dataset` | datasets | Random sample rows |
-| `irena_answer_question` | cross | Natural-language search plus dataset hints |
+| `irena_answer_question` | cross | Hybrid natural-language search, dataset hints, and per-retrieval transparency |
 
-All 11 tools return JSON. Dataset responses include an inline citation block in the form `[data: <dataset_id>, rows=N, filter=...]`.
+All 12 tools return JSON. Dataset responses include an inline citation block in the form `[data: <dataset_id>, rows=N, filter=...]`.
 
 ## Cost corpus
 
@@ -160,7 +161,7 @@ The numbers below are pulled live from the DuckDB snapshot at the time of this r
                          ▼
               ┌────────────────────────┐
               │  FastMCP HTTP transport│
-              │  11 tools, SIGHUP-reload│
+              │  12 tools, SIGHUP-reload│
               └──┬──────────────────┬──┘
                  │                  │
        DuckDB ◄──┘                  └──► SQLite FTS5 (in-memory)
@@ -177,6 +178,7 @@ Two storage backends, both read-only at runtime. DuckDB serves the 7 statistical
 - The DuckDB file is opened `read_only=True`. A concurrent refresh that swaps the file via `os.replace` is safe; the running server holds an open file descriptor to the old inode until its next query, which then transparently opens the new file.
 - The container runs with a read-only root filesystem. Writable state is confined to named tmpfs volumes for the `uv` cache.
 - All MCP tool handlers are `async`; blocking DuckDB and FTS5 I/O is wrapped in `asyncio.to_thread` so the FastMCP event loop multiplexes concurrent sessions. Verified at 10 concurrent users with 0 malformed responses.
+- `irena_search_reports` and `irena_answer_question` do hybrid retrieval: BM25 over the in-memory FTS5 index plus dense cosine similarity over `nomic-embed-text` 768-dim vectors, fused via Reciprocal Rank Fusion (k=60). The dense vectors live in a separate DuckDB file (`IRENA_DATA_DIR/embeddings.duckdb`), pre-computed on the host and bind-mounted read-only into the container. Each hit carries per-retriever ranks and scores plus a `sources` list.
 
 ## Repository layout
 
@@ -190,9 +192,10 @@ sparkscout/
 │   └── tools/
 │       ├── datasets.py        6 dataset tools over DuckDB
 │       ├── duckdb_loader.py   Read-only DuckDB connection manager
+│       ├── embeddings.py      nomic-embed-text client + vector store
 │       ├── fts5_index.py      In-memory SQLite FTS5 report index
-│       ├── fusion.py          irena_answer_question
-│       └── reports.py         4 report tools
+│       ├── fusion.py          irena_answer_question (hybrid retrieval)
+│       └── reports.py         4 report tools + irena_embed_health
 ├── docker-compose.yml         Local stack
 ├── docs/
 │   └── integrate.md           Per-client MCP setup blocks
@@ -216,9 +219,17 @@ docker exec sparkscout bash -c 'uv run --with duckdb==1.1.3 python /tmp/qa_fix_k
 
 The pre-ship gate is 0 malformed responses and 0 silent filter coercions across the run.
 
+To rebuild the embedding store after adding reports or switching models:
+
+```bash
+# Run on the host where mg-ollama is reachable. Writes
+# IRENA_DATA_DIR/embeddings.duckdb; bind-mounted into the container.
+uv run --with duckdb python tools/embed_corpus.py --reindex
+```
+
 ## Known issues
 
-- `irena_search_reports` uses a phrase-quoted FTS5 query; multi-word natural-language questions work better through `irena_answer_question`, which tokenises the question, drops stopwords, and OR-merges per-term BM25 hits.
+- When a natural-language question has no BM25 keyword matches, hybrid retrieval falls back to the dense retriever and returns hits flagged with `sources: ["dense"]` along with a `notes` line in `irena_answer_question`. This is intentional transparency for LLM agents, not a bug. Verify dense-only hits against the cited publication before quoting.
 
 ## License
 
