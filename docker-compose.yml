@@ -39,7 +39,10 @@ services:
     ports:
       - "127.0.0.1:7100:8000"
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/health"]
+      # python3 -c one-liner because the slim image does not ship curl or
+      # wget; curl-based healthchecks fail with OCI runtime exec error.
+      # python3 is the entrypoint interpreter so it is always present.
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request,sys;r=urllib.request.urlopen('http://127.0.0.1:8000/health',timeout=3);sys.exit(0 if r.status==200 else 1)\""]
       interval: 30s
       timeout: 5s
       retries: 3
