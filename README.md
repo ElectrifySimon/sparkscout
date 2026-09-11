@@ -70,17 +70,84 @@ The server binds to `0.0.0.0:8000`. The MCP client config for a live hosted endp
 
 ## 💬 Worked example
 
-A natural-language question, end to end. The user asks the assistant; the assistant calls SparkScout on the user's behalf; the answer comes back with the citation that makes it usable.
+Three live tool calls from the running server. The user asks the assistant; the assistant calls SparkScout on the user's behalf; the response carries the citation needed to verify every figure or excerpt.
+
+### Example 1: a precise question with a known dataset
 
 > **User:** What was Brazil's installed solar capacity in 2024?
 >
-> **Assistant (after calling `irena_query_dataset`):** Brazil's installed solar PV capacity at the end of 2024 was 53,107 MW, up from 37,557 MW at the end of 2023. The citation block in the response identified the source publication; the assistant quotes it directly.
-
-When the question is broader or paraphrased, the way real policy questions are written, hybrid retrieval takes over:
-
-> **User:** What is the cost of solar PV in 2025?
+> **Assistant** calls `irena_query_dataset(dataset_id="country_capacity", filters={"countries": ["Brazil"], "technologies": ["Solar photovoltaic"], "years": ["2024"]}, limit=5)`. The tool translates the friendly labels to dim codes (Brazil → BRA, Solar photovoltaic → tech 2, 2024 → 24), runs the parameter-bound query, and returns:
 >
-> **Assistant (after calling `irena_answer_question`):** Two publications in the corpus cover this, and the assistant cites them both. The retrieval block flagged the answer as a dense-only match (the question triggered no BM25 keyword hits), so the assistant noted the limitation and pointed the user at the cited publications for verification.
+> ```json
+> {
+>   "dataset_id": "country_capacity",
+>   "columns": ["Country/area", "Technology", "Grid connection", "Year", "Electricity capacity statistics"],
+>   "rows": [
+>     {"Country/area": "BRA", "Technology": "2", "Grid connection": "0", "Year": "24", "Electricity capacity statistics": 53107.46},
+>     {"Country/area": "BRA", "Technology": "2", "Grid connection": "1", "Year": "24", "Electricity capacity statistics": 6.66}
+>   ],
+>   "row_count": 2,
+>   "citations": ["[data: country_capacity, rows=2, filter={"countries": ["Brazil"], "technologies": ["Solar photovoltaic"], "years": ["2024"]}]"],
+>   "filters_applied": {"countries": ["BRA"], "technologies": ["2"], "years": ["24"]},
+>   "filters_dropped": {},
+>   "sql_executed": "SELECT ... FROM "country_capacity" WHERE "Country/area" IN (?) AND "Technology" IN (?) AND "Year" IN (?) LIMIT 5"
+> }
+> ```
+>
+> Brazil's installed solar PV capacity at the end of 2024 was **53,107 MW**. The citation block identifies the dataset; the response includes the SQL that ran, the dim codes that matched, and the drop list (empty here) so the assistant knows nothing was silently coerced.
+
+### Example 2: a precise question with the cost corpus
+
+The same tool serves the curated extract of the cost report. Same call shape, different `dataset_id`:
+
+> **User:** What was the weighted-average LCOE for solar PV in the World region in 2025?
+>
+> **Assistant** calls `irena_query_dataset(dataset_id="lcoe_weighted", filters={"regions": ["World"], "technologies": ["solar_pv"], "years": ["2025"]}, limit=3)`. The cost corpus lives in a second DuckDB attached as schema `cost`, so the SQL targets `cost.fact_lcoe_weighted`:
+>
+> ```json
+> {
+>   "dataset_id": "lcoe_weighted",
+>   "title": "Levelised cost of electricity (LCOE), weighted average, by technology, region, country, and year",
+>   "columns": ["technology_id", "region", "country", "year", "value"],
+>   "rows": [
+>     {"technology_id": "solar_pv", "region": "World", "country": "NN", "year": 2025, "value": 44.0},
+>     {"technology_id": "solar_pv", "region": "World", "country": "NN", "year": 2025, "value": 55.0}
+>   ],
+>   "row_count": 2,
+>   "citations": ["[data: lcoe_weighted, rows=2, filter={"regions": ["World"], "technologies": ["solar_pv"], "years": ["2025"]}]"],
+>   "filters_applied": {"regions": ["World"], "technologies": ["solar_pv"], "years": ["2025"]},
+>   "filters_dropped": {},
+>   "sql_executed": "SELECT ... FROM "cost"."fact_lcoe_weighted" WHERE "region" IN (?) AND "technology_id" IN (?) AND "year" IN (?) LIMIT 3"
+> }
+> ```
+>
+> Two rows: solar PV weighted-average LCOE in the World region in 2025 was **44 USD/MWh** (cross-tech aggregate, including and excluding China) and **55 USD/MWh** (a different scope condition from the same Fig 1.2 source). The assistant cites both with the source metric label in `context`, and notes the scope distinction before quoting either figure.
+
+### Example 3: a paraphrased question with hybrid retrieval
+
+When the question is paraphrased the way a policy researcher actually asks it, the dataset tool cannot resolve it on its own. The assistant switches to the cross-tool:
+
+> **User:** What does the latest cost briefing say about solar PV in 2025?
+>
+> **Assistant** calls `irena_answer_question(question="What does the latest cost briefing say about solar PV in 2025?", top_k_reports=3)`. The hybrid retriever fuses BM25 over the publication corpus with dense cosine similarity over `nomic-embed-text` 768-dim vectors:
+>
+> ```json
+> {
+>   "question": "What does the latest cost briefing say about solar PV in 2025?",
+>   "reports": [
+>     {"report_id": "IRENA_TEC_Solar_PV_Supply_Cost_Tool_2026", "rrf_score": 0.0164, "sources": ["dense"]},
+>     {"report_id": "IRENA_TEC_RPGC_in_2025_2026", "rrf_score": 0.0161, "sources": ["dense"]},
+>     {"report_id": "IRENA_TEC_Renewable_Power_Generation_Costs_2025", "rrf_score": 0.0159, "sources": ["dense"]}
+>   ],
+>   "citation_block": "[reports: IRENA_TEC_Solar_PV_Supply_Cost_Tool_2026, IRENA_TEC_RPGC_in_2025_2026, IRENA_TEC_Renewable_Power_Generation_Costs_2025]",
+>   "notes": [
+>     "BM25 returned no hits; results are dense-only and may need verification"
+>   ],
+>   "retrieval": {"bm25_only": false, "dense_only": true, "bm25_count": 0, "dense_count": 12}
+> }
+> ```
+>
+> Three IRENA publications cover the question. The `retrieval` block flags the answer as **dense-only** (BM25 returned zero hits, so the retriever leaned entirely on semantic similarity), and the assistant notes that the user should verify against the cited publications before quoting. Hit-shape carries `rrf_score`, per-retriever `sources`, and the original `report_id` for the next-step citation lookup.
 
 The full call sequence, the filter surface, and the citation block format are documented in the [🧪 Integration guide](./docs/integrate.md).
 

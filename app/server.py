@@ -122,7 +122,7 @@ TABLE_SCHEMAS = {
     # Schema convention: fact_<dataset_id>, dim_<dataset_id>_<dim>.
     "lcoe_weighted": {
         "title": "Levelised cost of electricity (LCOE), weighted average, by technology, region, country, and year",
-        "measure_column": "Electricity capacity statistics",  # placeholder; real measure is `value`
+        "measure_column": "value",  # cost corpus uses the literal `value` column for the numeric measure
         "units": "USD/MWh",
         "schema_name": "cost",
         "dimension_columns": ["technology_id", "region", "country", "year"],
