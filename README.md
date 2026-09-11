@@ -285,7 +285,7 @@ sparkscout/
 │       ├── embeddings.py      nomic-embed-text client + vector store
 │       ├── fts5_index.py      In-memory SQLite FTS5 report index
 │       ├── fusion.py          irena_answer_question (hybrid retrieval)
-│       └── reports.py         4 report tools + irena_embed_health
+│       └── reports.py         5 report tools + irena_embed_health
 ├── docker-compose.yml         Local stack
 ├── docs/
 │   └── integrate.md           Per-client MCP setup blocks
@@ -296,15 +296,15 @@ sparkscout/
 
 ## ✅ Tests
 
-The repository ships with a stress harness at `app/stress_harness.py` and manual verification scripts that exercise the bug fixes from the initial release: technology alias resolution, plural-safe dim table lookup, and natural-language question tokenisation.
+The repository ships with a stress harness at `app/stress_harness.py` that exercises the full tool surface under concurrent load, plus one targeted trace script (`app/trace_k2.py`) for silent-filter-coerce regression work.
 
 ```bash
-# Stress harness: run 100 calls at --users 5 against a local or remote endpoint
-python app/stress_harness.py --users 5 --calls 100
-
-# Inside the container:
-docker exec sparkscout bash -c 'ls /tmp/qa_*.py /tmp/trace_*.py'
-docker exec sparkscout bash -c 'uv run --with duckdb==1.1.3 python /tmp/qa_fix_k.py'
+# Stress harness against the local container (10 batches × 100 calls, 5 concurrent users)
+python app/stress_harness.py \
+  --host <proxmox-host> --lxc <lxc-id> \
+  --url http://127.0.0.1:7100/mcp \
+  --token "$FASTMCP_BEARER" \
+  --batches 10 --per-batch 100 --users 5
 ```
 
 The pre-ship gate is 0 malformed responses and 0 silent filter coercions across the run.
@@ -321,6 +321,7 @@ uv run --with duckdb python tools/embed_corpus.py --reindex
 
 - When a natural-language question has no BM25 keyword matches, hybrid retrieval falls back to the dense retriever and returns hits flagged with `sources: ["dense"]` along with a `notes` line in `irena_answer_question`. This is intentional transparency for LLM agents, not a bug. Verify dense-only hits against the cited publication before quoting.
 - The corpus currently reflects a single upstream publisher's publication cycle. Multi-publisher coverage (additional public sources, climate-policy documents) is in active planning and will be added without breaking the existing tool contracts.
+- `irena_query_dataset` and the aggregations tool surface any filter value that cannot resolve to a dimension code under `filters_dropped`. Each entry carries the original `value` and a `reason` string (`null value`, `integer scalar; not a dim code`, `boolean scalar; not a dim code`, `non-integer float; not a dim code`, `empty string`). LLMs that send placeholder scalars (for example `0`, `True`, `None`) should read this block before assuming a query returned no rows because of a real empty result.
 
 ## 📄 License
 
