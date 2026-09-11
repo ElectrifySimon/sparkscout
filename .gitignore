@@ -59,3 +59,8 @@ logs/
 trace_*.py
 /tmp/trace_*.py
 /tmp/qa_*.py
+
+# Embeddings store (DuckDB binary). Regenerate with tools/embed_corpus.py --reindex.
+embeddings.duckdb
+**/embeddings.duckdb
+**/embeddings.duckdb.wal

@@ -16,6 +16,7 @@ from tools.fts5_index import FTS5Index
 from tools import reports as reports_tools
 from tools import datasets as datasets_tools
 from tools import fusion as fusion_tools
+from tools.embeddings import Embeddings
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("sparkscout")
@@ -23,6 +24,9 @@ log = logging.getLogger("sparkscout")
 IRENA_REPORTS_DIR = os.environ.get("IRENA_REPORTS_DIR", "/data/reports")
 IRENA_DATA_DIR = os.environ.get("IRENA_DATA_DIR", "/data/irena")
 DUCKDB_PATH = os.environ.get("DUCKDB_PATH", os.path.join(IRENA_DATA_DIR, "irena.duckdb"))
+COST_DUCKDB_PATH = os.environ.get(
+    "COST_DUCKDB_PATH", os.path.join(IRENA_DATA_DIR, "irena_cost.duckdb")
+)
 BEARER_TOKEN = os.environ.get("FASTMCP_BEARER", "")
 
 # SSoT for table schemas — used by both the dataset tools and the
@@ -100,19 +104,6 @@ TABLE_SCHEMAS = {
             "Year": "years",
         },
     },
-    "lcoe_weighted": {
-        "title": "IRENA Renewable Power Generation Costs 2025 — weighted-average LCOE by technology, region, country, and year",
-        "schema_name": "cost",
-        "measure_column": "value",
-        "units": "USD/MWh (2024 real)",
-        "dimension_columns": ["region", "technology_id", "country", "year"],
-        "filter_aliases": {
-            "region": "regions",
-            "technology_id": "technologies",
-            "country": "countries",
-            "year": "years",
-        },
-    },
     "public_investments": {
         "title": "Public Investments (2022 Million USD) by country/area, technology, and year",
         "measure_column": "Public Investments (2022 Million USD)",
@@ -124,12 +115,29 @@ TABLE_SCHEMAS = {
             "Year": "years",
         },
     },
+    # ---- IRENA 2025 cost corpus (lcoe_weighted headline) ----
+    # Lives in the secondary DuckDB (irena_cost.duckdb), attached as
+    # schema `cost` by DuckDBLoader. Built by build_cost_duckdb.py
+    # from the v8 CSV bundle (irena_cost_review_20260909_v8).
+    # Schema convention: fact_<dataset_id>, dim_<dataset_id>_<dim>.
+    "lcoe_weighted": {
+        "title": "Levelised cost of electricity (LCOE), weighted average, by technology, region, country, and year",
+        "measure_column": "Electricity capacity statistics",  # placeholder; real measure is `value`
+        "units": "USD/MWh",
+        "schema_name": "cost",
+        "dimension_columns": ["technology_id", "region", "country", "year"],
+        "filter_aliases": {
+            "technology_id": "technologies",
+            "region": "regions",
+            "country": "countries",
+            "year": "years",
+        },
+    },
 }
 
 
 # Init state
-cost_path = os.environ.get("COST_DUCKDB_PATH", os.path.join(IRENA_DATA_DIR, "irena_cost.duckdb"))
-duckdb_loader = DuckDBLoader(DUCKDB_PATH, cost_path=cost_path)
+duckdb_loader = DuckDBLoader(DUCKDB_PATH, cost_path=COST_DUCKDB_PATH)
 fts5_index = FTS5Index(IRENA_REPORTS_DIR)
 
 try:
@@ -146,10 +154,25 @@ except Exception as e:
     log.error(f"failed to build FTS5 index: {e}")
     raise
 
+# Embeddings store — separate DuckDB file at IRENA_DATA_DIR/embeddings.duckdb.
+# Failures here are non-fatal: the server should still serve BM25 search and
+# dataset queries even if the embedding backend (mg-ollama) is unreachable.
+# The embed_health tool exposes the store state so operators can diagnose.
+embeddings = Embeddings(
+    store_path=os.path.join(IRENA_DATA_DIR, "embeddings.duckdb"),
+    reports_dir=IRENA_REPORTS_DIR,
+)
+try:
+    embeddings.open()
+    log.info(f"opened embeddings store: {embeddings.stats()}")
+except Exception as e:
+    log.error(f"failed to open embeddings store: {e}")
+    embeddings = None
+
 
 # FastMCP app — token-gated at every tool call
 auth = StaticTokenVerifier(tokens={BEARER_TOKEN: {"client_id": "sparkscout"}}) if BEARER_TOKEN else None
-mcp = FastMCP("SparkScout", auth=auth, instructions="IRENA reports + datasets MCP. Tools are namespaced sparkscout_*.")
+mcp = FastMCP("SparkScout", auth=auth, instructions="IRENA reports + datasets MCP. Tools are namespaced irena_*.")
 
 
 # Health endpoint (FastMCP mounts this when transport is HTTP)
@@ -165,7 +188,7 @@ async def health(request: Request) -> PlainTextResponse:
 
 
 # Register tool groups
-reports_tools.register(mcp, IRENA_REPORTS_DIR, fts5_index)
+reports_tools.register(mcp, IRENA_REPORTS_DIR, fts5_index, embeddings=embeddings)
 datasets_tools.register(mcp, duckdb_loader, TABLE_SCHEMAS)
 fusion_tools.register(mcp, fts5_index, TABLE_SCHEMAS)
 

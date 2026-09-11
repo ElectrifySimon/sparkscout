@@ -12,7 +12,7 @@ services:
       # CACHEDIR.TAG and friends without EACCES.
       - /tmp:size=64M,uid=1000,gid=1000
       - /home/app/.cache:size=256M,uid=1000,gid=1000,exec
-    cap_drop: [NET_RAW, SYS_ADMIN]
+    cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
     user: "1000:1000"
     working_dir: /home/app
@@ -23,6 +23,10 @@ services:
       - ./.env:/home/app/.env:ro
       - ${IRENA_REPORTS_DIR}:/data/reports:ro
       - ${IRENA_DATA_DIR}:/data/irena:ro
+      # Pre-computed embeddings store. Rebuilt on the host via
+      # tools/embed_corpus.py --reindex; mounted read-only here.
+      # The container opens this path as the canonical store.
+      - ${IRENA_DATA_DIR}/embeddings.duckdb:/home/app/.cache/embeddings.duckdb:ro
     environment:
       - IRENA_REPORTS_DIR=/data/reports
       - IRENA_DATA_DIR=/data/irena
@@ -52,7 +56,7 @@ services:
     read_only: false
     tmpfs:
       - /tmp:size=32M
-    cap_drop: [NET_RAW, SYS_ADMIN]
+    cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro

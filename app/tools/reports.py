@@ -7,7 +7,7 @@ concurrent sessions. FTS5 I/O is dispatched via asyncio.to_thread.
 import asyncio
 
 
-def register(mcp, reports_dir: str, fts5_index):
+def register(mcp, reports_dir: str, fts5_index, embeddings=None):
     @mcp.tool
     async def irena_list_reports(year: int | None = None) -> list[dict]:
         """List IRENA reports in the corpus.
@@ -67,3 +67,20 @@ def register(mcp, reports_dir: str, fts5_index):
         def _cite():
             return fts5_index.cite(report_id, style=style)
         return await asyncio.to_thread(_cite)
+
+    @mcp.tool
+    async def irena_embed_health() -> dict:
+        """Return embedding-store health and stats.
+
+        Returns dict with: store ("open"|"closed"), path, model, dim,
+        embedded_count, last_embedded_at, backend_ok (round-trip
+        healthcheck). Use this to confirm the embedding layer is alive
+        without pulling every report's vector.
+        """
+        if embeddings is None:
+            return {"store": "disabled"}
+        def _stats():
+            stats = embeddings.stats()
+            stats["backend_ok"] = embeddings.healthcheck()
+            return stats
+        return await asyncio.to_thread(_stats)
