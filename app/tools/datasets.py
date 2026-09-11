@@ -46,19 +46,39 @@ TECH_ALIASES = {
 # ---- helpers (also called from server.py via tool definitions) ----
 
 def _dim_name(table_id: str, dim_code: str, schema_name: str = "main") -> str:
-    """Qualified dim table name. PxWeb uses dim_<table>_<dim_code> (schema `main`);
-    cost-corpus tables live in schema `cost` and follow the same naming."""
-    base = f"dim_{table_id}_{dim_code.lower().replace('/', '_').replace(' ', '_').replace('-', '_')}"
+    """Qualified dim table name. PxWeb uses dim_<table>_<dim_code> (schema `main`).
+    Cost-corpus tables live in schema `cost` and use the same naming, but the
+    `technology_id` column on the cost side maps to the dim table
+    `dim_<table>_technology` (the `_id` suffix is column-only, not dim-table-only).
+    Strip the trailing `_id` from dim_code for non-main schemas to align.
+    """
+    dim_code_norm = dim_code.lower().replace('/', '_').replace(' ', '_').replace('-', '_')
+    if schema_name != "main" and dim_code_norm.endswith("_id"):
+        dim_code_norm = dim_code_norm[:-3]
+    base = f"dim_{table_id}_{dim_code_norm}"
     if schema_name == "main":
         return base
     return f"{schema_name}.{base}"
 
 
 def _fact_name(table_id: str, schema_name: str = "main") -> str:
-    """Qualified fact table name. Same convention as _dim_name."""
+    """Qualified fact table name. PxWeb fact tables use the dataset_id verbatim
+    (schema `main`). Cost-corpus fact tables live under `fact_<table_id>` in
+    schema `cost`, so the helper prefixes `fact_` for non-main schemas.
+    """
     if schema_name == "main":
         return table_id
-    return f"{schema_name}.{table_id}"
+    return f"{schema_name}.fact_{table_id}"
+
+
+def _quote_table(name: str) -> str:
+    """Quote each schema-qualified segment separately.
+
+    DuckDB resolves `cost.fact_lcoe_weighted` as schema-dot-table, but the
+    quoted form `"cost.fact_lcoe_weighted"` is treated as one identifier and
+    fails to find the table. Split on `.` and quote each segment.
+    """
+    return ".".join(f'"{p}"' for p in name.split("."))
 
 
 def _row_to_dict(columns: list[str], row: tuple) -> dict:
@@ -108,14 +128,14 @@ def _resolve_filter_values(duckdb_loader, dataset_id: str, dim_col: str, values,
     # table 'year'), fall back to the singular form.
     effective_dim_table = dim_table
     try:
-        duckdb_loader.execute(f'SELECT 1 FROM "{dim_table}" LIMIT 0')
+        duckdb_loader.execute(f'SELECT 1 FROM {_quote_table(dim_table)} LIMIT 0')
     except Exception:
         if dataset_id and dim_col.endswith("s") and singular:
             effective_dim_table = dim_table_singular
     try:
         # Phase 1: exact (case-insensitive) label OR code match
         rows = duckdb_loader.execute(
-            f'SELECT code, label FROM "{effective_dim_table}" '
+            f'SELECT code, label FROM {_quote_table(effective_dim_table)} '
             f'WHERE LOWER(label) = ANY(?) OR LOWER(code) = ANY(?)',
             [[str(v).lower() for v in values], [str(v).lower() for v in values]],
         ).fetchall()
@@ -127,7 +147,7 @@ def _resolve_filter_values(duckdb_loader, dataset_id: str, dim_col: str, values,
             if v_lower in {c.lower() for c in codes}:
                 continue
             rows = duckdb_loader.execute(
-                f'SELECT code, label FROM "{effective_dim_table}" '
+                f'SELECT code, label FROM {_quote_table(effective_dim_table)} '
                 f'WHERE LOWER(label) LIKE ?',
                 [f'%{v_lower}%'],
             ).fetchall()
@@ -189,7 +209,7 @@ def _build_query_sql(duckdb_loader, dataset_id: str, schema: dict, filters: dict
             params.extend(codes)
 
     quoted_cols = ", ".join([f'"{c}"' for c in columns])
-    sql = f'SELECT {quoted_cols} FROM "{fact_table}"'
+    sql = f'SELECT {quoted_cols} FROM {_quote_table(fact_table)}'
     if where_clauses:
         sql += " WHERE " + " AND ".join(where_clauses)
 
@@ -222,17 +242,17 @@ def register(mcp, duckdb_loader, table_schemas: dict):
                 fact_table = _fact_name(ds_id, schema_name)
                 try:
                     row_count = duckdb_loader.execute(
-                        f'SELECT COUNT(*) FROM "{fact_table}"'
+                        f'SELECT COUNT(*) FROM {_quote_table(fact_table)}'
                     ).fetchone()[0]
                     max_year = duckdb_loader.execute(
-                        f'SELECT MAX(CAST("Year" AS INTEGER)) FROM "{fact_table}"'
+                        f'SELECT MAX(CAST("Year" AS INTEGER)) FROM {_quote_table(fact_table)}'
                     ).fetchone()[0]
                 except Exception:
                     row_count = None
                     max_year = None
                 try:
                     source = duckdb_loader.execute(
-                        f'SELECT DISTINCT source FROM "{fact_table}" WHERE source IS NOT NULL LIMIT 1'
+                        f'SELECT DISTINCT source FROM {_quote_table(fact_table)} WHERE source IS NOT NULL LIMIT 1'
                     ).fetchone()
                     source = source[0] if source else "(no source attribution)"
                 except Exception:
@@ -272,7 +292,7 @@ def register(mcp, duckdb_loader, table_schemas: dict):
                 dim_table = _dim_name(dataset_id, dim_col, schema_name)
                 try:
                     codes = duckdb_loader.execute(
-                        f'SELECT code, label FROM "{dim_table}" LIMIT 50'
+                        f'SELECT code, label FROM {_quote_table(dim_table)} LIMIT 50'
                     ).fetchall()
                     dimension_codes.append({
                         "column": dim_col,
