@@ -190,7 +190,7 @@ async def health(request: Request) -> PlainTextResponse:
 # Register tool groups
 reports_tools.register(mcp, IRENA_REPORTS_DIR, fts5_index, embeddings=embeddings)
 datasets_tools.register(mcp, duckdb_loader, TABLE_SCHEMAS)
-fusion_tools.register(mcp, fts5_index, TABLE_SCHEMAS)
+fusion_tools.register(mcp, fts5_index, TABLE_SCHEMAS, embeddings=embeddings)
 
 
 # SIGHUP handler — re-open DuckDB handle and rebuild FTS5 without restart

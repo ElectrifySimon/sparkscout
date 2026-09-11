@@ -8,8 +8,9 @@ explicitly. No SQL execution in this tool.
 Async tool wrapper so the FastMCP event loop stays unblocked under
 concurrent sessions. FTS5 I/O is dispatched via asyncio.to_thread.
 """
-
 import asyncio
+
+from tools.fts5_index import rrf_fuse
 
 
 def _keyword_hits(text: str, dim_codes: list[str]) -> set:
@@ -24,38 +25,64 @@ def _keyword_hits(text: str, dim_codes: list[str]) -> set:
     return hits
 
 
-def register(mcp, fts5_index, table_schemas: dict):
+def register(mcp, fts5_index, table_schemas: dict, embeddings=None):
     @mcp.tool
     async def irena_answer_question(question: str, top_k_reports: int = 3) -> dict:
         """Search IRENA reports for the question and surface dataset candidates.
 
-        No dataset auto-routing. Returns report search hits and DatasetHint[]
-        listing plausible datasets; the LLM picks and calls irena_query_dataset.
+        Hybrid retrieval (BM25 + dense RRF) ranks the report hits; dataset
+        candidates are matched by question keywords against dataset titles
+        and dimension labels. The LLM picks which dataset to query and
+        calls irena_query_dataset explicitly. No SQL execution in this tool.
 
         Args:
             question: natural language question.
             top_k_reports: number of report search hits to return (default 3, cap 10).
 
-        Returns: {question, reports, citation_block, notes, dataset_candidates}.
+        Returns: {question, reports, citation_block, notes, dataset_candidates,
+                retrieval}. `retrieval` summarizes how the hits were sourced
+                (BM25 only, dense only, or hybrid).
         """
         top_k_reports = max(1, min(top_k_reports, 10))
         def _search():
-            return fts5_index.search(question, top_k=top_k_reports)
-        hits = await asyncio.to_thread(_search)
-        reports = []
-        for h in hits:
-            meta = h.get("metadata", {})
-            reports.append({
-                "report_id": h["report_id"],
-                "chapter": h.get("chapter"),
-                "excerpt": h.get("excerpt"),
-                "line_number": None,
-                "score": h.get("score"),
-                "matched_terms": [],
-                "title": meta.get("title", ""),
-                "year": meta.get("year"),
-                "citation": meta.get("citation"),
-            })
+            over_fetch = max(top_k_reports * 3, 12)
+            bm25_hits = fts5_index.search(question, top_k=over_fetch)
+            dense_hits = []
+            if embeddings is not None:
+                try:
+                    dense_hits = embeddings.search(question, top_k=over_fetch)
+                except Exception as e:
+                    log = __import__("logging").getLogger(__name__)
+                    log.warning(f"dense search failed, falling back to BM25: {e}")
+            fused = rrf_fuse(bm25_hits, dense_hits, top_k=top_k_reports)
+            retrieval = {
+                "bm25_only": len(dense_hits) == 0,
+                "dense_only": len(bm25_hits) == 0,
+                "bm25_count": len(bm25_hits),
+                "dense_count": len(dense_hits),
+            }
+            reports = []
+            for h in fused:
+                excerpt = h.get("excerpt") or ""
+                if not excerpt:
+                    excerpt = fts5_index.fetch_excerpt(h["report_id"])
+                meta = h.get("metadata") or {}
+                reports.append({
+                    "report_id": h["report_id"],
+                    "chapter": None,
+                    "excerpt": excerpt,
+                    "line_number": None,
+                    "score": h["rrf_score"],
+                    "rrf_score": h["rrf_score"],
+                    "sources": h["sources"],
+                    "matched_terms": [],
+                    "title": meta.get("title", ""),
+                    "year": meta.get("year"),
+                    "citation": meta.get("citation"),
+                })
+            return reports, retrieval
+        result = await asyncio.to_thread(_search)
+        reports, retrieval = result
         citation_block = "[reports: " + ", ".join(r["report_id"] for r in reports) + "]" if reports else "[reports: none]"
 
         # Dataset candidate detection: match question text against dim labels
@@ -98,6 +125,10 @@ def register(mcp, fts5_index, table_schemas: dict):
             notes.append("no reports matched the question text")
         if not candidates:
             notes.append("no datasets seemed relevant; try irena_list_datasets to browse")
+        if retrieval["dense_only"]:
+            notes.append("BM25 returned no hits; results are dense-only and may need verification")
+        if retrieval["bm25_only"]:
+            notes.append("dense retrieval was unavailable; results are BM25-only")
 
         return {
             "question": question,
@@ -105,4 +136,5 @@ def register(mcp, fts5_index, table_schemas: dict):
             "citation_block": citation_block,
             "notes": notes,
             "dataset_candidates": candidates,
+            "retrieval": retrieval,
         }

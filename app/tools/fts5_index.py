@@ -19,6 +19,14 @@ class FTS5Index:
     def build(self):
         """(Re)build the FTS5 index from scratch."""
         # Use :memory: so the index doesn't persist on disk; small enough.
+        # check_same_thread=False: the index is built on the main thread
+        # but every search runs via asyncio.to_thread on the FastMCP
+        # default thread pool. SQLite's default check_same_thread=True
+        # raises "objects created in a thread can only be used in that
+        # same thread" when the pool dispatches to a different worker.
+        # We don't run concurrent queries on the same connection (each
+        # tool call awaits its own to_thread before the next starts),
+        # so the relaxed check is safe.
         self.conn = sqlite3.connect(":memory:", check_same_thread=False)
         self.conn.execute(
             """
@@ -125,6 +133,26 @@ class FTS5Index:
             return '"' + q.replace('"', '""') + '"'
         return q
 
+    def fetch_excerpt(self, report_id: str, max_chars: int = 320) -> str:
+        """Best-effort excerpt for a hit we know by report_id but not by query.
+
+        Used when RRF surfaces a dense-only result. Returns the first
+        non-empty chunk of the report body, capped at max_chars. Empty
+        string if the file can't be read.
+        """
+        meta = self.metadata.get(report_id)
+        if not meta:
+            return ""
+        try:
+            with open(meta["file_path"], "r", encoding="utf-8", errors="replace") as f:
+                body = f.read()
+        except Exception:
+            return ""
+        # Skip title/heading lines so the excerpt starts on prose.
+        lines = [l for l in body.splitlines() if l.strip() and not l.strip().startswith("#")]
+        chunk = "\n".join(lines[:8]) if lines else body[:max_chars]
+        return chunk[:max_chars]
+
     def doc_count(self) -> int:
         if self.conn is None:
             return 0
@@ -186,3 +214,69 @@ class FTS5Index:
             yr = meta.get("year") or "n.d."
             return f"IRENA. ({yr}). {meta.get('title', report_id)}. International Renewable Energy Agency, Abu Dhabi."
         return meta.get("citation") or meta.get("title", report_id)
+
+
+def rrf_fuse(
+    bm25_hits: list[dict],
+    dense_hits: list[dict],
+    top_k: int,
+    k: int = 60,
+) -> list[dict]:
+    """Reciprocal Rank Fusion of BM25 and dense retrieval results.
+
+    Cormack et al. 2009: rrf_score(d) = sum_{r in rankings} 1 / (k + rank_r(d)).
+    k=60 is the value recommended by the original paper and used by most
+    production implementations (Elasticsearch, Vespa, etc.).
+
+    Both input lists carry `report_id`. Output is the union, ranked by
+    fused score descending. Each hit carries the original bm25 and
+    dense ranks (None if absent from that list) and a `sources` list
+    showing which retrievers surfaced it.
+
+    `bm25_hits` items are expected to have {report_id, score, excerpt}.
+    `dense_hits` items are expected to have {report_id, score}.
+    """
+    fused: dict[str, dict] = {}
+    for rank, h in enumerate(bm25_hits, start=1):
+        rid = h["report_id"]
+        fused.setdefault(rid, {
+            "report_id": rid,
+            "bm25_rank": None,
+            "dense_rank": None,
+            "bm25_score": None,
+            "dense_score": None,
+            "excerpt": h.get("excerpt", ""),
+            "metadata": h.get("metadata", {}),
+            "sources": [],
+            "rrf_score": 0.0,
+        })
+        fused[rid]["bm25_rank"] = rank
+        fused[rid]["bm25_score"] = h.get("score")
+        if "BM25" not in fused[rid]["sources"]:
+            fused[rid]["sources"].append("BM25")
+    for rank, h in enumerate(dense_hits, start=1):
+        rid = h["report_id"]
+        fused.setdefault(rid, {
+            "report_id": rid,
+            "bm25_rank": None,
+            "dense_rank": None,
+            "bm25_score": None,
+            "dense_score": None,
+            "excerpt": "",
+            "metadata": {},
+            "sources": [],
+            "rrf_score": 0.0,
+        })
+        fused[rid]["dense_rank"] = rank
+        fused[rid]["dense_score"] = h.get("score")
+        if "dense" not in fused[rid]["sources"]:
+            fused[rid]["sources"].append("dense")
+    for rid, hit in fused.items():
+        score = 0.0
+        if hit["bm25_rank"] is not None:
+            score += 1.0 / (k + hit["bm25_rank"])
+        if hit["dense_rank"] is not None:
+            score += 1.0 / (k + hit["dense_rank"])
+        hit["rrf_score"] = score
+    ranked = sorted(fused.values(), key=lambda h: h["rrf_score"], reverse=True)
+    return ranked[:top_k]
