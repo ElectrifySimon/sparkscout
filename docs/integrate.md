@@ -1,6 +1,6 @@
 # Integrate your AI assistant with SparkScout
 
-SparkScout speaks the Model Context Protocol (MCP) over HTTP. Any MCP-aware client can connect by pointing at one of the service URLs and sending a bearer token in the `Authorization` header. This document is the copy-pasteable reference: pick the client you use, paste the block, restart the client, and the eleven corpus tools are available.
+SparkScout speaks the Model Context Protocol (MCP) over HTTP. Any MCP-aware client can connect by pointing at one of the service URLs and sending a bearer token in the `Authorization` header. This document is the copy-pasteable reference: pick the client you use, paste the block, restart the client, and the twelve corpus tools are available.
 
 The transport is **Streamable HTTP** (the MCP 2025-03-26 transport). Legacy HTTP+SSE clients are not supported. Bearer authentication is the only authentication method. OAuth is not in scope.
 
@@ -68,7 +68,7 @@ On macOS, the config file is at `~/Library/Application Support/Claude/claude_des
 }
 ```
 
-Set the environment variable `SPARKSCOUT_TOKEN` in the shell that launches Claude Desktop, or substitute the literal token. Restart Claude Desktop. The eleven corpus tools appear in the tools panel.
+Set the environment variable `SPARKSCOUT_TOKEN` in the shell that launches Claude Desktop, or substitute the literal token. Restart Claude Desktop. The twelve corpus tools appear in the tools panel.
 
 ### Claude Code (terminal)
 
@@ -162,7 +162,7 @@ curl -sS -X POST https://<host>.ts.net/sparkscout/mcp \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
 ```
 
-The response is a JSON-RPC envelope containing the eleven tools. To call a tool, send `{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"sparkscout_query_dataset","arguments":{"dataset_id":"country_capacity","filters":{"country":["BRA"],"technology":["Solar"]},"limit":10}}}`. The `name` field is the fully-qualified tool name including the `sparkscout_` prefix.
+The response is a JSON-RPC envelope containing the twelve tools. To call a tool, send `{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"irena_query_dataset","arguments":{"dataset_id":"country_capacity","filters":{"countries":["BRA"],"technologies":["Solar PV"],"years":[2024]},"limit":10}}}`. The `name` field is the Python function name as registered by the FastMCP server (the `irena_*` prefix); the public URL path (`/sparkscout/mcp`) is the same as before, only the tool names changed when the server moved to FastMCP 4.0.
 
 The same two headers (`Authorization` and `Content-Type: application/json`) plus the MCP-required `Accept: application/json, text/event-stream` header are sufficient for every operation. No additional headers are required. No cookies. No CSRF token. No state.
 
@@ -179,7 +179,7 @@ curl -fsS -X POST https://<host>.ts.net/sparkscout/mcp \
   | python3 -c 'import sys, json; d=json.load(sys.stdin); print(len(d["result"]["tools"]), "tools:", [t["name"] for t in d["result"]["tools"]])'
 ```
 
-Expected output: `11 tools: ['sparkscout_answer_question', 'sparkscout_get_dataset_meta', 'sparkscout_get_report', 'sparkscout_list_cpr_geographies', 'sparkscout_list_datasets', 'sparkscout_list_reports', 'sparkscout_query_dataset', 'sparkscout_query_dataset_aggregations', 'sparkscout_search_cpr', 'sparkscout_search_reports', 'sparkscout_cpr_country_summary']` (the list of names will grow as new data sources are added). A count of 0 or a 401 means the bearer is wrong; a count that does not include the names above means the server is up but returning a cached or stale schema, which means a restart is in progress on the operator side.
+Expected output: `12 tools: ['irena_answer_question', 'irena_cite', 'irena_embed_health', 'irena_get_dataset_meta', 'irena_get_dataset_value', 'irena_get_report', 'irena_list_datasets', 'irena_list_reports', 'irena_query_dataset', 'irena_query_dataset_aggregations', 'irena_sample_dataset', 'irena_search_reports']` (the list of names will grow as new data sources are added). A count of 0 or a 401 means the bearer is wrong; a count that does not include the names above means the server is up but returning a cached or stale schema, which means a restart is in progress on the operator side.
 
 ## Common failures
 
@@ -198,4 +198,4 @@ If the rotation is urgent (token leak), the operator can invalidate the old toke
 
 ## What this document does not cover
 
-OAuth 2.1 flows. The service does not implement OAuth; the bearer is the only authentication method, period. If your client requires OAuth and cannot consume a static bearer, you cannot use SparkScout as-is. The service does not implement API key rotation hooks (the operator rotates the bearer; the service does not call back to a key-management system). The service does not implement per-tool authorization (every authenticated client has the same eleven tools, no scoping). The service does not implement rate limiting at the bearer level (rate limits, if any, are global). If any of those become requirements, the answer is a new release of the service, not a workaround in the client.
+OAuth 2.1 flows. The service does not implement OAuth; the bearer is the only authentication method, period. If your client requires OAuth and cannot consume a static bearer, you cannot use SparkScout as-is. The service does not implement API key rotation hooks (the operator rotates the bearer; the service does not call back to a key-management system). The service does not implement per-tool authorization (every authenticated client has the same twelve tools, no scoping). The service does not implement rate limiting at the bearer level (rate limits, if any, are global). If any of those become requirements, the answer is a new release of the service, not a workaround in the client.
