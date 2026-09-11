@@ -137,8 +137,19 @@ class FTS5Index:
         """Best-effort excerpt for a hit we know by report_id but not by query.
 
         Used when RRF surfaces a dense-only result. Returns the first
-        non-empty chunk of the report body, capped at max_chars. Empty
-        string if the file can't be read.
+        paragraph of real content past the frontmatter boilerplate
+        (copyright, ISBN, About IRENA, Acknowledgements, Table of
+        Contents, Executive Summary headers), capped at max_chars.
+        Empty string if the file can't be read.
+
+        Skip rule: walk the file and find the first line that opens a
+        numbered chapter, signalled by a heading that starts with a
+        digit followed by a period (`# 1.`, `### 2.`, etc.) or by the
+        heading `### INTRODUCTION` / `### EXECUTIVE SUMMARY` for
+        reports without numeric prefixes. Once we cross that marker,
+        take the next 8 non-empty prose lines. If no such marker is
+        found (rare, non-IRENA reports), fall back to the prior
+        behaviour of the first 8 non-heading lines.
         """
         meta = self.metadata.get(report_id)
         if not meta:
@@ -148,10 +159,39 @@ class FTS5Index:
                 body = f.read()
         except Exception:
             return ""
-        # Skip title/heading lines so the excerpt starts on prose.
-        lines = [l for l in body.splitlines() if l.strip() and not l.strip().startswith("#")]
-        chunk = "\n".join(lines[:8]) if lines else body[:max_chars]
-        return chunk[:max_chars]
+        lines = body.splitlines()
+
+        past_boilerplate = False
+        start = 0
+        import re
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+            if not stripped.startswith("#"):
+                continue
+            # Match `# 1.`, `## 2.`, `### 3.` (chapter starts with a
+            # number and a period, with optional whitespace).
+            m = re.match(r"^#{1,6}\s+\d+\.\s+\S", stripped)
+            if m:
+                past_boilerplate = True
+                start = i + 1
+                break
+            # Some reports use a named first chapter heading instead.
+            head = re.sub(r"^#+\s*", "", stripped).lower()
+            if head.startswith("introduction") or head.startswith("executive summary"):
+                past_boilerplate = True
+                start = i + 1
+                break
+
+        if not past_boilerplate:
+            tail = [
+                l for l in lines
+                if l.strip() and not l.strip().startswith("#")
+            ]
+            return "\n".join(tail[:8])[:max_chars]
+
+        body_lines = lines[start:]
+        prose = [l for l in body_lines if l.strip() and not l.strip().startswith("#")]
+        return "\n".join(prose[:8])[:max_chars] if prose else ""
 
     def doc_count(self) -> int:
         if self.conn is None:
