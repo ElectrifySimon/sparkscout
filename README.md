@@ -135,9 +135,24 @@ When the question is paraphrased the way a policy researcher actually asks it, t
 > {
 >   "question": "What does the latest cost briefing say about solar PV in 2025?",
 >   "reports": [
->     {"report_id": "IRENA_TEC_Solar_PV_Supply_Cost_Tool_2026", "rrf_score": 0.0164, "sources": ["dense"]},
->     {"report_id": "IRENA_TEC_RPGC_in_2025_2026", "rrf_score": 0.0161, "sources": ["dense"]},
->     {"report_id": "IRENA_TEC_Renewable_Power_Generation_Costs_2025", "rrf_score": 0.0159, "sources": ["dense"]}
+>     {
+>       "report_id": "IRENA_TEC_Solar_PV_Supply_Cost_Tool_2026",
+>       "excerpt": "![](<IRENA_TEC_Solar_PV_Supply_Cost_Tool_2026_images/imageFile1.png>) Methodology, results and analysis Unless otherwise stated, material in this publication may be freely used, shared, copied, reproduced, printed and/or stored, provided that appropriate acknowledgement is given of IRENA as the source and copyright hol… [verbatim; 320-char lead prose, capped]",
+>       "rrf_score": 0.0164,
+>       "sources": ["dense"]
+>     },
+>     {
+>       "report_id": "IRENA_TEC_RPGC_in_2025_2026",
+>       "excerpt": "Unless otherwise stated, material in this publication may be freely used, shared, copied, reproduced, printed and/or stored, provided that appropriate acknowledgement is given of IRENA as the source and copyright holder. Material in this publication that is attributed to third parties may be subject to separate terms o… [verbatim; 320-char lead prose, capped]",
+>       "rrf_score": 0.0161,
+>       "sources": ["dense"]
+>     },
+>     {
+>       "report_id": "IRENA_TEC_Renewable_Power_Generation_Costs_2025",
+>       "excerpt": "www.irena.org © IRENA 2026 RENEWABLE POWER GENERATION COSTS IN 2024 2026 … [verbatim; 320-char lead prose, capped]",
+>       "rrf_score": 0.0159,
+>       "sources": ["dense"]
+>     }
 >   ],
 >   "citation_block": "[reports: IRENA_TEC_Solar_PV_Supply_Cost_Tool_2026, IRENA_TEC_RPGC_in_2025_2026, IRENA_TEC_Renewable_Power_Generation_Costs_2025]",
 >   "notes": [
@@ -147,7 +162,7 @@ When the question is paraphrased the way a policy researcher actually asks it, t
 > }
 > ```
 >
-> Three IRENA publications cover the question. The `retrieval` block flags the answer as **dense-only** (BM25 returned zero hits, so the retriever leaned entirely on semantic similarity), and the assistant notes that the user should verify against the cited publications before quoting. Hit-shape carries `rrf_score`, per-retriever `sources`, and the original `report_id` for the next-step citation lookup.
+> Three IRENA publications cover the question. The `retrieval` block flags the answer as **dense-only** (BM25 returned zero hits, so the retriever leaned entirely on semantic similarity), and the assistant notes that the user should verify against the cited publications before quoting. Hit-shape carries `rrf_score`, per-retriever `sources`, the `report_id` for the next-step citation lookup, and an `excerpt` field that holds the **lead prose** of the matched report, capped at 320 chars. The excerpt is a fallback snippet, not the answer to the question; the assistant follows up with `irena_get_report(report_id=…, chapter=…)` to read the chapter that actually discusses solar PV cost. On the cost corpus, the lead prose is the copyright boilerplate, so the excerpt is not informative on its own; it exists to confirm the report was retrieved, and to anchor the next-step lookup against the correct file.
 
 The full call sequence, the filter surface, and the citation block format are documented in the [🧪 Integration guide](./docs/integrate.md).
 
