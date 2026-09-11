@@ -127,34 +127,34 @@ The same tool serves the curated extract of the cost report. Same call shape, di
 
 When the question is paraphrased the way a policy researcher actually asks it, the dataset tool cannot resolve it on its own. The assistant switches to the cross-tool:
 
-> **User:** What does the latest cost briefing say about solar PV in 2025?
+> **User:** What is the role of battery storage in West Africa mini-grids?
 >
-> **Assistant** calls `irena_answer_question(question="What does the latest cost briefing say about solar PV in 2025?", top_k_reports=3)`. The hybrid retriever fuses BM25 over the publication corpus with dense cosine similarity over `nomic-embed-text` 768-dim vectors:
+> **Assistant** calls `irena_answer_question(question="What is the role of battery storage in West Africa mini-grids?", top_k_reports=3)`. The hybrid retriever fuses BM25 over the publication corpus with dense cosine similarity over `nomic-embed-text` 768-dim vectors:
 >
 > ```json
 > {
->   "question": "What does the latest cost briefing say about solar PV in 2025?",
+>   "question": "What is the role of battery storage in West Africa mini-grids?",
 >   "reports": [
 >     {
->       "report_id": "IRENA_TEC_Solar_PV_Supply_Cost_Tool_2026",
->       "excerpt": "![](<IRENA_TEC_Solar_PV_Supply_Cost_Tool_2026_images/imageFile1.png>) Methodology, results and analysis Unless otherwise stated, material in this publication may be freely used, shared, copied, reproduced, printed and/or stored, provided that appropriate acknowledgement is given of IRENA as the source and copyright hol… [verbatim; 320-char lead prose, capped]",
+>       "report_id": "IRENA_TEC_Battery_storage_minigrids_W_Africa_2026",
+>       "excerpt": "While global efforts are directed towards tripling renewable power capacity by 2030 under the COP 28 UAE Consensus, in support of the Paris Agreement's 1.5°C climate goal, many regions continue to face significant challenges in providing decent and affordable electricity access to all. Western Africa is the second-largest [region]…",
 >       "rrf_score": 0.0164,
 >       "sources": ["dense"]
 >     },
 >     {
->       "report_id": "IRENA_TEC_RPGC_in_2025_2026",
->       "excerpt": "Unless otherwise stated, material in this publication may be freely used, shared, copied, reproduced, printed and/or stored, provided that appropriate acknowledgement is given of IRENA as the source and copyright holder. Material in this publication that is attributed to third parties may be subject to separate terms o… [verbatim; 320-char lead prose, capped]",
+>       "report_id": "IRENA_Grid_assessment_study_Mozambique_2023",
+>       "excerpt": "This grid assessment study investigates the behaviour of the power system of the Republic of Mozambique for different years in the time horizon 2022 to 2042, with the inclusion of different shares of VRE and with the proposed expansion plans identified by the utility Electricidade de Moçambique (EDM)…",
 >       "rrf_score": 0.0161,
 >       "sources": ["dense"]
 >     },
 >     {
->       "report_id": "IRENA_TEC_Renewable_Power_Generation_Costs_2025",
->       "excerpt": "www.irena.org © IRENA 2026 RENEWABLE POWER GENERATION COSTS IN 2024 2026 … [verbatim; 320-char lead prose, capped]",
+>       "report_id": "IRENA_TEC_Powering_climate_resilience_FWA_2026",
+>       "excerpt": "POWERING CLIMATE RESILIENCE IN FRANCOPHONE WEST AFRICA. This brief examines the multi-dimensional relationship between energy access and climate resilience, with a focus on the role that decentralised renewable energy systems can play in Francophone West Africa…",
 >       "rrf_score": 0.0159,
 >       "sources": ["dense"]
 >     }
 >   ],
->   "citation_block": "[reports: IRENA_TEC_Solar_PV_Supply_Cost_Tool_2026, IRENA_TEC_RPGC_in_2025_2026, IRENA_TEC_Renewable_Power_Generation_Costs_2025]",
+>   "citation_block": "[reports: IRENA_TEC_Battery_storage_minigrids_W_Africa_2026, IRENA_Grid_assessment_study_Mozambique_2023, IRENA_TEC_Powering_climate_resilience_FWA_2026]",
 >   "notes": [
 >     "BM25 returned no hits; results are dense-only and may need verification"
 >   ],
@@ -162,7 +162,7 @@ When the question is paraphrased the way a policy researcher actually asks it, t
 > }
 > ```
 >
-> Three IRENA publications cover the question. The `retrieval` block flags the answer as **dense-only** (BM25 returned zero hits, so the retriever leaned entirely on semantic similarity), and the assistant notes that the user should verify against the cited publications before quoting. Hit-shape carries `rrf_score`, per-retriever `sources`, the `report_id` for the next-step citation lookup, and an `excerpt` field that holds the **lead prose** of the matched report, capped at 320 chars. The excerpt is a fallback snippet, not the answer to the question; the assistant follows up with `irena_get_report(report_id=…, chapter=…)` to read the chapter that actually discusses solar PV cost. On the cost corpus, the lead prose is the copyright boilerplate, so the excerpt is not informative on its own; it exists to confirm the report was retrieved, and to anchor the next-step lookup against the correct file.
+> Three reports cover the question, all from the West Africa / African power-system corpus. The lead excerpt on the top hit is real content from the introduction, not frontmatter boilerplate. The `retrieval` block flags the answer as **dense-only** (BM25 returned zero hits, so the retriever leaned entirely on semantic similarity), and the assistant notes that the user should verify against the cited publications before quoting. Hit-shape carries `rrf_score`, per-retriever `sources`, the `report_id` for the next-step citation lookup, and an `excerpt` field that holds the **first paragraph of the body**, capped at 320 chars. The excerpt is a fallback snippet, not the answer to the question; the assistant follows up with `irena_get_report(report_id=…, chapter=…)` to read the chapter that actually discusses the topic.
 
 The full call sequence, the filter surface, and the citation block format are documented in the [🧪 Integration guide](./docs/integrate.md).
 
