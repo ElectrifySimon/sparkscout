@@ -195,18 +195,51 @@ def _build_query_sql(duckdb_loader, dataset_id: str, schema: dict, filters: dict
             if not isinstance(values, list):
                 values = [values]
             dim_col = reverse_alias[alias]
-            # Drop obviously-bad inputs before resolution: None, empty strings,
-            # non-string/non-int floats. Real strings/ints survive.
-            kept = [v for v in values if v is not None and v != "" and not isinstance(v, float)]
-            dropped = [v for v in values if v not in kept]
-            if dropped:
-                filters_dropped[alias] = dropped
+            # Per-entry pre-resolve drop with explicit reason. LLM clients
+            # frequently send None / "" / 0 / True / False / 3.14 as
+            # placeholder or noise values; we want to surface WHAT we
+            # dropped and WHY so the next call can self-correct (K fix,
+            # roadmap item K, surfaced 2026-09-10 during post-async-fix
+            # stress verification). The shape is a list of {value, reason}
+            # dicts so a client can read either field independently.
+            kept: list = []
+            dropped_entries: list[dict] = []
+            for v in values:
+                if v is None:
+                    dropped_entries.append({"value": v, "reason": "null value"})
+                    continue
+                if isinstance(v, bool):
+                    # bool is a subclass of int in Python; treat it as an
+                    # obvious "LLM defaulted to True/False" mistake.
+                    dropped_entries.append({"value": v, "reason": "boolean scalar; not a dim code"})
+                    continue
+                if isinstance(v, int):
+                    # Integer scalars are almost always placeholders.
+                    # String-shaped codes ("24", "2024") are handled
+                    # later by _resolve_filter_values; literal ints are
+                    # dropped with an explicit reason.
+                    dropped_entries.append({"value": v, "reason": "integer scalar; not a dim code"})
+                    continue
+                if isinstance(v, float):
+                    dropped_entries.append({"value": v, "reason": "non-integer float; not a dim code"})
+                    continue
+                if isinstance(v, str) and v == "":
+                    dropped_entries.append({"value": v, "reason": "empty string"})
+                    continue
+                kept.append(v)
+            if dropped_entries:
+                filters_dropped[alias] = dropped_entries
             codes = _resolve_filter_values(duckdb_loader, dataset_id, dim_col, kept, schema_name)
             if codes:
                 filters_applied[alias] = codes
-            placeholders = ",".join(["?"] * len(codes))
-            where_clauses.append(f'"{dim_col}" IN ({placeholders})')
-            params.extend(codes)
+                placeholders = ",".join(["?"] * len(codes))
+                where_clauses.append(f'"{dim_col}" IN ({placeholders})')
+                params.extend(codes)
+            # When codes is empty (all values were dropped), we skip the
+            # WHERE clause for this alias. The filter effectively becomes
+            # a no-op, and the response carries filters_dropped to explain
+            # why. This avoids the `WHERE ... IN ()` syntax error that
+            # masked the K defect before the per-entry-reason fix.
 
     quoted_cols = ", ".join([f'"{c}"' for c in columns])
     sql = f'SELECT {quoted_cols} FROM {_quote_table(fact_table)}'
@@ -391,7 +424,10 @@ def register(mcp, duckdb_loader, table_schemas: dict):
             dataset_id: one of the 7 known datasets.
             group_by: list of filter_aliases to group by (e.g. ["countries", "years"]).
             aggregations: list of {"column": str, "function": "sum"|"avg"|"count"|"min"|"max", "alias": str}.
-                column must be a filter_alias; alias is the result column name.
+                column must be the measure column name (a free-text string
+                that irena_get_dataset_meta returns under the measure_column
+                field of the schema); group_by entries use filter_aliases.
+                alias is the result column name.
             filters: optional structured filter (same shape as irena_query_dataset).
 
         Returns: aggregated rows with one row per group_by tuple.
